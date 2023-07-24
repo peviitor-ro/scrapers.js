@@ -1,0 +1,26 @@
+name: test_job
+on: pull_request
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Installing node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: git diff
+        id: files
+        uses: jitterbit/get-changed-files@v1
+      - name: Save diff output to diffSite.txt
+        run: |
+          echo -n "${{ steps.files.outputs.added_modified }}" > __tests__/diffSites.txt
+          echo -n " " >> __tests__/diffSites.txt
+          echo -n "${{ steps.files.outputs.renamed }}" >> __tests__/diffSites.txt
+      - name: npm install
+        run: npm i
+      - name: npm test
+        run: npm test
