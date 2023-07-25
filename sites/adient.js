@@ -1,5 +1,5 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const uuid = require("uuid");
+
 const generateJob = (job_title, job_link, country, city) => ({
   job_title,
   job_link,
@@ -52,7 +52,7 @@ const getParams = () => {
   const company = "Adient";
   const logo =
     "https://www.adient.com/wp-content/uploads/2021/09/Adient_Logo.png";
-  const apikey = uuid.v4();
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
@@ -67,4 +67,6 @@ const run = async () => {
   postApiPeViitor(jobs, params);
 };
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+run(); // this will be called by our main.js job
+
+module.exports = { getJobs, getParams }; // this is needed for our unit test job

@@ -35,8 +35,7 @@ s.soup
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo =
-      "https://zartis.blob.core.windows.net/user/Company_11020/brp_logo_rgb_ps.jpg?sv=2019-07-07&sr=b&sig=SxBwH1ThMXSUN6wNwOXNZ8SeiY3QkwITdn2LUIHV2Is%3D&se=2023-05-18T00%3A31%3A30Z&sp=r&rscd=inline%3Bfilename%3D%22brp_logo_rgb_ps.jpg%22";
+    let logo = "https://zartis.blob.core.windows.net/user/Company_11020/brp_logo_rgb_ps.jpg?sv=2019-07-07&sr=b&sig=H6poOs73n0y5jczQc%2FB6uzLeoyLnYmdrQBYgSo18BCE%3D&se=2023-07-23T12%3A08%3A32Z&sp=r&rscd=inline%3Bfilename%3D%22brp_logo_rgb_ps.jpg%22"
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"

@@ -15,27 +15,26 @@ s.soup.then((soup) => {
     soup.find("span", { class: "paginationLabel" }).findAll("b")[1].text.trim()
   );
   let step = 25;
-
-  let range = scraper.range(0, totalJobs, step);
+  let numberPages = Math.ceil(totalJobs / step);
 
   const fetchData = () => {
     return new Promise((resolve, reject) => {
       let jobs = [];
-      range.forEach((page) => {
-        const url = `https://careers.yazaki.com/search/?q=&locationsearch=Romania&startrow=${page}`;
 
+      for (let i = 0; i < numberPages; i++) {
+        const url = `https://careers.yazaki.com/search/?q=&locationsearch=Romania&startrow=${i * step}`;
         const s = new scraper.Scraper(url);
 
         s.soup.then((soup) => {
           const results = soup.find("tbody").findAll("tr");
           results.forEach((job) => {
             jobs.push(job);
+            if (jobs.length === totalJobs) {
+              resolve(jobs);
+            }
           });
-          if (jobs.length === totalJobs) {
-            resolve(jobs);
-          }
         });
-      });
+      };
     });
   };
 
@@ -67,6 +66,7 @@ s.soup.then((soup) => {
     })
     .then(() => {
       console.log(JSON.stringify(finalJobs, null, 2));
+      console.log(finalJobs.length);
 
       scraper.postApiPeViitor(finalJobs, company);
 

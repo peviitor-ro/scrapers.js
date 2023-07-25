@@ -65,4 +65,6 @@ const run = async () => {
   await postApiPeViitor(jobs, params);
 };
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+run(); // this will be called by our main.js job
+
+module.exports = { getJobs, getParams }; // this is needed for our unit test job
