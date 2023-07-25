@@ -57,4 +57,8 @@ const run = async () => {
   postApiPeViitor(jobs, params);
 };
 
+if (require.main === module) {
+  run();
+}
+
 module.exports = { run, getJobs, getParams };
