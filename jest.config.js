@@ -4,5 +4,6 @@ module.exports = {
     "/sites/",
     "__tests__/getTestData.js",
     "__tests__/getTestDataOld.js",
+    "__tests__/diffSites.txt",
   ],
 };
