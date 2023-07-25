@@ -23,4 +23,9 @@ jobs:
       - name: npm install
         run: npm i
       - name: npm test
+        env:
+          APIKEY: ${{ secrets.APIKEY }}
+          Marcel: ${{ secrets.MARCEL }}
+          KNOX: ${{ secrets.KNOX }}
+          COSTIN: ${{ secrets.COSTIN }}
         run: npm test

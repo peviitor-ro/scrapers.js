@@ -23,7 +23,7 @@ Pentru a va seta mediul de lucru urmați următorii pași:
 
 ## Exemple de utilizare
 
-0. Pentru exemple de implementări puteți consulta [this](https://github.com/peviitor-ro/based_scraper_js/blob/main/sites/syncrosoft.js), [this](https://github.com/peviitor-ro/based_scraper_js/blob/main/sites/abbvie.js) or [this](https://github.com/peviitor-ro/based_scraper_js/blob/main/sites/adient.js)
+0. Pentru exemple de implementări puteți consulta [this](https://github.com/peviitor-ro/scrapers.js/blob/main/sites/syncrosoft.js), [this](https://github.com/peviitor-ro/scrapers.js/blob/main/sites/abbvie.js) or [this](https://github.com/peviitor-ro/scrapers.js/blob/main/sites/adient.js)
 
 1. Descărcarea conținutului de la un anumit URL:
 
