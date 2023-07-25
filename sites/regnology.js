@@ -33,7 +33,7 @@ s.soup
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo = "https://www.altfi.com/images/companies/regnology.png";
+    let logo = "https://www.regnology.net/project/frontend/build/logo-regnology.7537d456.svg";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"

@@ -41,7 +41,7 @@ const getJobs = async () => {
 };
 
 const getParams = () => {
-  const company = "omega";
+  const company = "Abbvie";
   const logo =
     "https://tbcdn.talentbrew.com/company/14/v2_0/img/abbvie-logo-color.svg";
   const apikey = process.env.APIKEY;
@@ -58,5 +58,9 @@ const run = async () => {
   const params = getParams();
   postApiPeViitor(jobs, params);
 };
+
+if (require.main === module) {
+    run();
+}
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

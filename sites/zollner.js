@@ -33,7 +33,7 @@ s.soup
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo = "https://www.zollner.ro/fileadmin/templatefiles/images/logo.svg";
+    let logo = "https://www.zollner.ro/fileadmin/user_upload/00_Startseite/logo.svg";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"

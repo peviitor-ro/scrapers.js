@@ -51,9 +51,6 @@ if (paramsCollection.length === 0) {
           const { apikey } = values;
           expect(apikey, "apikey is undefined").toBeDefined();
           expect(apikey.trim(), "apikey is empty").toBeTruthy();
-          expect(apikey).toMatch(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-          ); // Validate UUID format
         });
       });
     });
