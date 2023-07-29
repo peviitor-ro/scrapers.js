@@ -1,45 +1,65 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const querystring = require('querystring');
 
-const url =
-  "https://tss-yonder.com/careers/career-opportunities/open-positions-yonder/";
+const generateJob = (job_title, job_link, city) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+});
 
-const company = { company: "Yonder" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url =
+    "https://tss-yonder.com/wp-admin/admin-ajax.php";
+  const scraper = new Scraper(url);
+  let post_data = {
+    'p':1,
+    'action':'filter_jobs',
+    'nonce':'a95427d712',
+  };
 
-const s = new scraper.Scraper(url);
+  const res = await scraper.post(querystring.stringify(post_data));
+  const pages = res.pages;
 
-s.soup
-  .then((soup) => {
-    const jobs = soup.find("section", { id: "accordion" }).findAll("label");
+  const jobs = [];
+  for (let i = 1; i <= pages; i++) {
+    post_data.p = i;
+    const res = await scraper.post(querystring.stringify(post_data));
+    const jobs_objects = res.jobs;
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("h3").text.trim();
-      const job_link = job.find("a").attrs.href;
-
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        country: "Romania",
-        city: "Romania",
-        company: company.company,
-      });
+    jobs_objects.forEach((job) => {
+      const job_title = job.title;
+      const job_link = job.url;
+      const city = job.location;
+      const obj = generateJob(job_title, job_link, city);
+      jobs.push(obj);
     });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
+  };
 
-    scraper.postApiPeViitor(finalJobs, company);
+  return jobs;
+};
 
-    let logo =
-      "https://tss-yonder.com/wp-content/themes/Yonder-1.4/images/yonder-logo.svg";
+const getParams = () => {
+  const company = "Yonder";
+  const logo =
+    "https://tss-yonder.com/wp-content/themes/Yonder-1.4/images/yonder-logo.svg";
+  const apikey = "123";
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
 
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+    run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
