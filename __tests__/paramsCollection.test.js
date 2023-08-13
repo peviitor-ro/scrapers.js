@@ -40,11 +40,42 @@ if (paramsCollection.length === 0) {
           ).toEqual(trimmedFilename);
         });
 
-        test("logo exists & is not empty & must be a URL", () => {
+        const downloadAndCheckImage = async (logo) => {
+          try {
+            const response = await fetch(logo);
+            if (response.ok) {
+              const contentType = response.headers.get("content-type");
+
+              // Check if the content is a valid image format (e.g., PNG, JPEG, GIF)
+              const validImageFormats = [
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/bmp",
+                "image/webp",
+                "image/tiff",
+                "image/svg+xml",
+                "image/x-icon",
+              ];
+              if (validImageFormats.includes(contentType)) {
+                return false; // Valid image -> easier to return falsy and display the error message
+              } else {
+                return "Not a valid image";
+              }
+            } else {
+              return "Error response from server";
+            }
+          } catch (error) {
+            console.error("Error downloading image:", error.message);
+            return "Error occurred while fetching";
+          }
+        };
+
+        test("Download and check image validity", async () => {
           const { logo } = values;
-          expect(logo, "params.logo is undefined").toBeDefined();
-          expect(logo.trim(), "params.logo is empty").toBeTruthy();
-          expect(logo).toMatch(/^(https?:\/\/).+\.(png|svg|jpg|jpeg|gif)$/); // URL pattern check for image formats
+          const isNotValidImage = await downloadAndCheckImage(logo);
+
+          expect(isNotValidImage, `Error message: ${isNotValidImage}`).toBeFalsy();
         });
 
         test("apikey exists & is not empty & is uuid4", () => {

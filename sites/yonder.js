@@ -52,7 +52,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Yonder";
   const logo =
-    "https://tss-yonder.com/wp-content/themes/Yonder-1.4/images/yonder-logo.svg";
+    "https://tss-yonder.com/wp-content/themes/yonder/assets/images/logo.svg";
   const apikey = process.env.APIKEY;
   const params = {
     company,
