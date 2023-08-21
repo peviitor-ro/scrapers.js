@@ -8,14 +8,24 @@ const generateJob = (job_title, job_link, city) => ({
   city,
 });
 
+const get_nonce = async (url) => {
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup(type = "HTML");
+  const nonce = res.text.match(/nonce":"(.*?)"/)[1];
+  return nonce;
+};
+
+
 const getJobs = async () => {
   const url =
     "https://tss-yonder.com/wp-admin/admin-ajax.php";
   const scraper = new Scraper(url);
+  const nonce = await get_nonce("https://tss-yonder.com/job");
+
   let post_data = {
     'p':1,
     'action':'filter_jobs',
-    'nonce':'a95427d712',
+    'nonce':nonce,
   };
 
   const res = await scraper.post(querystring.stringify(post_data));
@@ -42,8 +52,8 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Yonder";
   const logo =
-    "https://tss-yonder.com/wp-content/themes/Yonder-1.4/images/yonder-logo.svg";
-  const apikey = "123";
+    "https://tss-yonder.com/wp-content/themes/yonder/assets/images/logo.svg";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
