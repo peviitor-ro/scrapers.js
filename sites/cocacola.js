@@ -1,10 +1,9 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
 const url = "https://careers.coca-colahellenic.com/ro_RO/careers/SearchJobs/?1293=%5B6003%5D&1293_format=2880&listFilterMode=1&projectRecordsPerPage=50";
 
-const company = { company: "Coca Cola HBC" };
+const company = { company: "CocaColaHBC" };
 let finalJobs = [];
 const regex =/\((.*?)\)/;
 const apiKey = process.env.KNOX
@@ -14,20 +13,16 @@ s.soup
   .then((soup) => {
     const jobs = soup.findAll("div",{ class: "article__header__text" });
     jobs.forEach((job) => {
-      const id = uuid.v4();
       const job_title = job.find("a").text.trim(); 
       const job_link = job.find("a").attrs.href;
       const cityArray = job.find("span", { class: "list-item" }).text.trim().match(regex);
       let city = ""; 
       if (cityArray && cityArray.length >= 2) {
          city = cityArray[1];
-        console.log(city);
     }else{
          city = "Multiple Locations";
-        console.log(city);
     }
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
