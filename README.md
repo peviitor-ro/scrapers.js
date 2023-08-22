@@ -13,6 +13,11 @@ Caracteristicile cheie ale **peviitor_jsscraper** includ:
 - Oferă o interfață simpla de stocare pentru datele prelucrate.
 - Este ușor de utilizat și integrat în proiectele JavaScript existente.
 
+!!! Nu toate scraperele ce se afla în acest repository pot fi rulate local. Scraperele care nu includ la final următoarea bucată de  cod „ module.exports = { run, getJobs, getParams } ” pot fi rulate doar din vechiul repository astfel:
+git clone https://github.com/peviitor-ro/based_scraper_js.git
+npm i 
+node nume_scraper_vechi
+
 ## Instalare
 
 Pentru a va seta mediul de lucru urmați următorii pași:
