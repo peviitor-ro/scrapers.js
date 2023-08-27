@@ -42,7 +42,7 @@ s.soup
   })
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company, process.env.Marcel);
+    scraper.postApiPeViitor(finalJobs, company, process.env.APIKEY);
 
     let logo = "https://www.kontron.ro/kontron_Logo-RGB-2C.svg";
 
