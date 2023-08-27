@@ -38,7 +38,7 @@ s.post(body)
 
 
 
-    scraper.postApiPeViitor(finalJobs, company,process.env.Marcel);
+    scraper.postApiPeViitor(finalJobs, company,process.env.APIKEY);
 
     let logo = "https://kone.wd3.myworkdayjobs.com/Careers/assets/logo";
 
