@@ -30,7 +30,7 @@ s.soup
   })
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company,process.env.Marcel);
+    scraper.postApiPeViitor(finalJobs, company,process.env.APIKEY);
 
     let logo =
       "https://www.bandainamcoent.ro/wp-content/themes/namco/img/logo_small.jpg";

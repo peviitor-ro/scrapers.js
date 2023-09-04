@@ -1,41 +1,51 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 
-const url = "https://jobs.apple.com/ro-ro/search?location=romania-ROMC";
+const generateJob = (job_title, job_link, city) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+});
 
-const company = { company: "apple" };
-let finalJobs = [];
+const getJobs = async () => {  
+  let jobs = [];
+  const url = "https://jobs.apple.com/ro-ro/search?location=romania-ROMC";
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("HTML");
+  const items = res.find("table", { id: "tblResultSet" }).findAll("tbody");
 
-const s = new scraper.Scraper(url);
-
-s.soup
-  .then((soup) => {
-    const jobs = soup.find("table", { id: "tblResultSet" }).findAll("tbody");
-    console.log(jobs.length);
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("a").text.trim();
-      const job_link = "https://jobs.apple.com" + job.find("a").attrs.href;
-      const city = job.find("td", { class: "table-col-2" }).text.trim();
-
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: city,
-        country: "Romania",
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company,process.env.Marcel);
-    let logo = "https://www.apple.com/apple-touch-icon.png";
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+  items.forEach((job) => {
+    jobs.push(generateJob(
+        job.find("a").text.trim(),
+        "https://jobs.apple.com" + job.find("a").attrs.href,
+        job.find("td", { class: "table-col-2" }).text.trim(), 
+    ));
   });
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company =  "apple"
+  const logo =
+    "https://www.apple.com/apple-touch-icon.png";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+    run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

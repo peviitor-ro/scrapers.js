@@ -55,7 +55,7 @@ async function data() {
   });
 
   console.log(JSON.stringify(finalJobs, null, 2));
-  scraper.postApiPeViitor(finalJobs, company,process.env.Marcel);
+  scraper.postApiPeViitor(finalJobs, company,process.env.APIKEY);
   let logo =
     "https://www.majorel.com/wp-content/themes/majorel/_frontend/assets/icons/logo.svg";
 
