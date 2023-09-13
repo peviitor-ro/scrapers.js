@@ -37,9 +37,7 @@ fetch(url, {
 
     let logo = "https://media.academictransfer.com/LT8OEP2nAexUPaM9-WfgcP488FM=/fit-in/490x162/filters:upscale():fill(white)/logos/ortec-en-wide.jpg";
 
-    let postLogo = new scraper.ApiScraper(
-      "https://content.energage.com/company-images/61925/logo.png"
-    );
+    let postLogo = new scraper.ApiScraper("https://api.peviitor.ro/v1/logo/add/");
     postLogo.headers.headers["Content-Type"] = "application/json";
     postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });
