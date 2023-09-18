@@ -44,6 +44,6 @@ fetch(url, {
     const postLogo = new scraper.ApiScraper("https://api.peviitor.ro/v1/logo/add/");
 
     postLogo.headers.headers["Content-Type"] = "application/json";
-
+    
     postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });
