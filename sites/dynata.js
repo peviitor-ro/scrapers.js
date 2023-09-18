@@ -1,6 +1,5 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
 const apiKey = process.env.KNOX
 const url = 'https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/jobs'  
@@ -25,7 +24,6 @@ fetch(url, {
        const jobTitle = job.title;
        const externalPath = "https://dynata.wd1.myworkdayjobs.com/en-US/careers" + job.externalPath;
        finalJobs.push({
-        id: id,
         job_title: jobTitle,
         job_link: externalPath,
         country: "Romania",

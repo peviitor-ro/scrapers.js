@@ -1,7 +1,11 @@
-"use strict";
+/* eslint-disable object-shorthand */
+/* eslint-disable import/extensions */
+/* eslint-disable import/no-unresolved */
+/* eslint-disable no-console */
 const scraper = require("../peviitor_scraper.js");
+
 const company = { company: "Ortec" };
-let finalJobs = [];
+const finalJobs = [];
 const apiKey = process.env.KNOX
 const url = 'https://ortec.com/api/career'
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
@@ -24,7 +28,7 @@ fetch(url, {
       const jobid = obj.jobId;
       finalJobs.push({
         job_title: jobTitle,
-        job_link: "https://ortec.com/en/careers/find-jobs/career/jobs?id="+ jobid,
+        job_link: `https://ortec.com/en/careers/find-jobs/career/jobs?id=${jobid}`,
         company: company.company,
         city: 'Bucuresti',
         country: "Romania",
@@ -35,9 +39,9 @@ fetch(url, {
 
     scraper.postApiPeViitor(finalJobs, company, apiKey);
 
-    let logo = "https://media.academictransfer.com/LT8OEP2nAexUPaM9-WfgcP488FM=/fit-in/490x162/filters:upscale():fill(white)/logos/ortec-en-wide.jpg";
+    const logo = "https://media.academictransfer.com/LT8OEP2nAexUPaM9-WfgcP488FM=/fit-in/490x162/filters:upscale():fill(white)/logos/ortec-en-wide.jpg";
 
-    let postLogo = new scraper.ApiScraper("https://api.peviitor.ro/v1/logo/add/");
+    const postLogo = new scraper.ApiScraper("https://api.peviitor.ro/v1/logo/add/");
 
     postLogo.headers.headers["Content-Type"] = "application/json";
     
