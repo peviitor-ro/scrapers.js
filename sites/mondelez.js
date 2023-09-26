@@ -33,7 +33,7 @@ const getJobs = async () => {
         "https://wd3.myworkdaysite.com/en-US/recruiting/mdlz/External";
       const job_link = job_link_prefix + externalPath;
       const separatorIndex = locationsText.indexOf(",");
-      const country = locationsText.substring(0, separatorIndex);
+      const country = "Romania";
       const city = locationsText.substring(separatorIndex + 1);
       const job = generateJob(title, job_link, country, city);
       jobs.push(job);
@@ -46,7 +46,7 @@ const getParams = () => {
   const company = "Mondelez";
   const logo =
     "https://www.mondelezinternational.com/-/media/Mondelez/Media/Asset-Library/logos/MDLZlogo.jpg";
-  const apikey = process.env.APIKEY;
+  const apikey = "process.env.APIKEY";
   const params = {
     company,
     logo,
