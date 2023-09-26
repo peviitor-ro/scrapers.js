@@ -20,7 +20,6 @@ fetch(url, {
   .then(responseData => {
      const jobPostings = responseData.jobPostings;
      jobPostings.forEach(job => {
-       const id = uuid.v4();
        const jobTitle = job.title;
        const externalPath = "https://dynata.wd1.myworkdayjobs.com/en-US/careers" + job.externalPath;
        finalJobs.push({
@@ -45,8 +44,7 @@ fetch(url, {
     );
     postLogo.headers.headers["Content-Type"] = "application/json";
     postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-
-   })
+   });
   
 
 
