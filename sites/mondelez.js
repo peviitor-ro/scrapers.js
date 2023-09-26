@@ -46,7 +46,7 @@ const getParams = () => {
   const company = "Mondelez";
   const logo =
     "https://www.mondelezinternational.com/-/media/Mondelez/Media/Asset-Library/logos/MDLZlogo.jpg";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
