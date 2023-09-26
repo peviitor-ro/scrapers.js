@@ -45,7 +45,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Mondelez";
   const logo =
-    "https://www.mondelezinternational.com/-/media/Mondelez/Media/Asset-Library/logos/MDLZlogo.jpg";
+    "https://wd3.myworkdaysite.com/recruiting/mdlz/External/assets/logo";
   const apikey = process.env.APIKEY;
   const params = {
     company,
