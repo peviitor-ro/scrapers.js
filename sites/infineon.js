@@ -1,6 +1,5 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 const company = { company: "Infineon" };
 let finalJobs = [];
 const apiKey = process.env.KNOX
@@ -31,12 +30,10 @@ fetch(url, {
   .then(responseData => {
     
     responseData.pages.items.forEach(obj => {
-      const id = uuid.v4();
       const jobTitle = obj.title;
       const city = obj.location[0];
       const link = "https://www.infineon.com" + obj.detail_page_url;
       finalJobs.push({
-        id: id,
         job_title: jobTitle,
         job_link: link,
         company: company.company,
