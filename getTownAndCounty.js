@@ -4483,6 +4483,7 @@ const counties = [
   {
     Cluj: [
       "Cluj-Napoca",
+      "Cluj Napoca",
       "Turda",
       "Dej",
       "Campia Turzii",
