@@ -1,43 +1,53 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 
-const url = "https://www.regnology.net/en/careers/?city=Romania#jobs";
+const generateJob = (job_title, job_link) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city: "Sibiu",
+  county: "Sibiu",
+  remote: [],
+});
 
-const company = { company: "Regnology" };
-let finalJobs = [];
+const getJobs = async () => {
+  let url =
+    "https://www.regnology.net/en/careers/?city=Romania#jobs";
+  const jobs = [];
+  const scraper = new Scraper(url);
 
-const s = new scraper.Scraper(url);
+  let res = await scraper.get_soup("HTML");
+  let items = res.find("ul", { class: "link-list" }).findAll("li");
 
-s.soup
-  .then((soup) => {
-    const jobs = soup.find("ul", { class: "link-list" }).findAll("li");
+  items.forEach((item) => {
+    const job_title = item.find("h3").text.trim();
+    const job_link = "https://www.regnology.net" + item.find("a").attrs.href;
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("a").text.trim();
-      const job_link = "https://www.regnology.net" + job.find("a").attrs.href;
-
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        city: "Romania",
-        country: "Romania",
-        company: company.company,
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo = "https://www.regnology.net/project/frontend/build/logo-regnology.7537d456.svg";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+    jobs.push(generateJob(job_title, job_link));
   });
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Regnology";
+  const logo =
+    "https://www.regnology.net/project/frontend/build/logo-regnology.7537d456.svg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
