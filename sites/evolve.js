@@ -1,13 +1,13 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county, jobtype) => ({
+const generateJob = (job_title, job_link, city, county, remote) => ({
   job_title,
   job_link,
   country: "Romania",
   city,
   county,
-  jobtype,
+  remote,
 });
 
 const getAditionalCitys = async (job_link) => {
