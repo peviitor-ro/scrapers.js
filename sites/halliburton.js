@@ -73,7 +73,7 @@ const getParams = () => {
   const company = "Halliburton";
   const logo =
     "https://rmkcdn.successfactors.com/6fdd2711/8ba9d1d9-30b6-4c01-b093-b.svg";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
