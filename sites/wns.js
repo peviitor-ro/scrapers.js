@@ -1,45 +1,75 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
 
-const url =
-  "https://careers.smartrecruiters.com/WNSGlobalServices144/wns-rom-career-page";
+const generateJob = (job_title, job_link, city, county, remote) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+  remote,
+});
 
-const company = { company: "WNS" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url =
+    "https://careers.smartrecruiters.com/WNSGlobalServices144?search=romania";
+  const jobs = [];
+  const scraper = new Scraper(url);
 
-const s = new scraper.Scraper(url);
+  const res = await scraper.get_soup("HTML");
+  const items = res
+    .find("div", { class: "js-openings-load" })
+    .findAll("section");
 
-s.soup
-  .then((soup) => {
-    const jobs = soup.findAll("li", { class: "opening-job" });
+  items.forEach((item) => {
+    let city = item
+      .find("h3", { class: "title" })
+      .text.replace(",", "")
+      .split(" ")[0];
+    if (city.includes("Bucharest")) {
+      city = "Bucuresti";
+    }
+    const { foudedTown, county } = getTownAndCounty(city);
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
+    const jobsElements = item.findAll("li", { class: "opening-job" });
+    jobsElements.forEach((job) => {
       const job_title = job.find("h4", { class: "details-title" }).text.trim();
       const job_link = job.find("a").attrs.href;
+      let remote = job.find("p", { class: "job-desc" }).text.trim();
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        country: "Romania",
-        city: "Romania",
-        company: company.company,
-      });
+      if (remote.includes("Remote") || remote.includes("Hybrid")) {
+        remote = remote.includes("Remote") ? "Remote" : "Hybrid";
+      } else {
+        remote = [];
+      }
+
+      jobs.push(generateJob(job_title, job_link, foudedTown, county, remote));
     });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo =
-      "https://www.wnscareers.com/Portals/0/logo.png?ver=2020-02-03-150252-400";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "WNS";
+  const logo =
+    "https://www.wnscareers.com/Portals/0/logo.png?ver=2020-02-03-150252-400";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
