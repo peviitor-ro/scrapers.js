@@ -13950,4 +13950,5 @@ const getTownAndCounty = (town) => {
 
 module.exports = {
     getTownAndCounty,
+    counties
 }
