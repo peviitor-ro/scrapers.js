@@ -1,11 +1,12 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city) => ({
+const generateJob = (job_title, job_link, city, county) => ({
   job_title,
   job_link,
   country: "Romania",
   city,
+  county,
 });
 
 const getJobs = async () => {
@@ -18,19 +19,22 @@ const getJobs = async () => {
   const jobs = [];
   items.forEach((item) => {
     let city = [];
+    const counties = [];
     const job_title = item.find("h3").text.trim();
     const job_link =  "https://agricover.ro" + item.find("a").attrs.href;
     const citys = item.find("h5").text.split(" ")
     citys.forEach((c) => {
-      const replacedChars = ["(", ")", ",", "."];
+      const replacedChars = ["(", ")", ",", ".", "/"];
       replacedChars.forEach((char) => {
         c = c.replace(char, "");
       });
       if (getTownAndCounty(c).foudedTown) {
-        city.push(getTownAndCounty(c).foudedTown);
+        const { foudedTown, county } = getTownAndCounty(c);
+        city.push(foudedTown);
+        counties.push(county);
       }
     });
-    const job = generateJob(job_title, job_link, city);
+    const job = generateJob(job_title, job_link, city, counties);
     jobs.push(job);
   });
 
