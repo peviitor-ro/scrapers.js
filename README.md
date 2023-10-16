@@ -22,7 +22,7 @@ node nume_scraper_vechi
 
 Pentru a va seta mediul de lucru urmați următorii pași:
 
-- Clonați fișierul `git clone https://github.com/peviitor-ro/based_scraper_py.git`
+- Clonați fișierul `git clone https://github.com/peviitor-ro/scrapers.js.git`
 - Navigați la directorul **based_scraper_js**. Rulați comanda `cd based_scraper_js` pentru a naviga la acest director.
 - Rulați comanda `npm i` pentru a instala dependințele.
 
