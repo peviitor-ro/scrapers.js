@@ -82,7 +82,7 @@ const getParams = () => {
   const company = "EY";
   const logo =
     "https://rmkcdn.successfactors.com/bcfdbc8a/688bb7d2-e818-494b-967e-0.png";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
