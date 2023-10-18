@@ -1,62 +1,73 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor, range } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-let url = " https://careers.altenromania.ro/jds/1";
+const generateJob = (job_title, job_link, city, county, remote) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+  remote,
+});
 
-const company = { company: "Alten" };
-let finalJobs = [];
+const getJobs = async () => {
+  let url = "https://careers.altenromania.ro/jds/1";
+  const jobs = [];
 
-const s = new scraper.ApiScraper(url);
+  const scraper = new Scraper(url);
+  let res = await scraper.get_soup("JSON");
 
-s.get().then((response) => {
-  let pages = JSON.parse(response.success.message).pager.pageCount;
-  let totalJobs = JSON.parse(response.success.message).pager.recordCount;
+  const pages = JSON.parse(res.success.message).pager.pageCount;
 
-  const fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 1; i <= pages; i++) {
-        let url = " https://careers.altenromania.ro/jds/" + i;
-        let s = new scraper.ApiScraper(url);
-        s.get().then((response) => {
-          const jobs = JSON.parse(response.success.message).recordList;
+  for (let i = 1; i <= pages; i++) {
+    const jobs_elements = JSON.parse(res.success.message).recordList;
+    jobs_elements.forEach((job) => {
+      const job_title = job.titlu;
+      const job_link = "https://careers.altenromania.ro/job/" + job.id;
+      const city = job.locatie;
+      const remote = [];
 
-          jobs.forEach((job) => {
-            const id = uuid.v4();
-            const job_title = job.titlu;
-            const job_link = "https://careers.altenromania.ro/job/" + job.id;
-            const city = job.locatie;
-
-            finalJobs.push({
-              id: id,
-              job_title: job_title,
-              job_link: job_link,
-              company: company.company,
-              country: "Romania",
-              city: city,
-            });
-          });
-
-          if (finalJobs.length === totalJobs) {
-            resolve(finalJobs);
-          }
-        });
+      if (city === "Remote"){
+        const city = "Romania";
+        const county = "";
+        remote.push("Remote");
+        jobs.push(generateJob(job_title, job_link, city, county, remote));
+      } else{
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase())
+        );
+        jobs.push(generateJob(job_title, job_link, foudedTown, county, remote));
       }
     });
+    url = "https://careers.altenromania.ro/jds/" + (i + 1);
+    scraper.url = url;
+    res = await scraper.get_soup("JSON");
+  }
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Alten";
+  const logo = "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
   };
+  return params;
+};
 
-  fetchData().then((finalJobs) => {
-    console.log(JSON.stringify(finalJobs, null, 2));
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
 
-    scraper.postApiPeViitor(finalJobs, company);
+if (require.main === module) {
+  run();
+}
 
-    let logo =
-      "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
-});
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
