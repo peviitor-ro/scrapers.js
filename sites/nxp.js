@@ -88,8 +88,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "NXP";
   const logo = "https://nxp.wd3.myworkdayjobs.com/careers/assets/logo";
-  // const apikey = process.env.APIKEY;
-  const apikey = "182b157-bb68-e3c5-5146-5f27dcd7a4c8"
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
