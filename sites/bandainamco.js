@@ -1,43 +1,51 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 
-const url = "https://www.bandainamcoent.ro/ro/careers/";
+const generateJob = (job_title, job_link) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city: "Bucuresti",
+  county: "Bucuresti",
+  remote: [],
+});
 
-const company = { company: "bandainamco" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url = "https://www.bandainamcoent.ro/ro/careers/";
+  const scraper = new Scraper(url);
+  const jobs = [];
+  const res = await scraper.get_soup("HTML");
+  const elements = res.findAll("p", { class: "career_job_links" });
 
-const s = new scraper.Scraper(url);
-
-s.soup
-  .then((soup) => {
-    const jobs = soup.findAll("p", { class: "career_job_links" });
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("a").text.trim();
-      const job_link =
-        "https://www.bandainamcoent.ro" + job.find("a").attrs.href;
-
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: "Romania",
-        country: "Romania",
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company,process.env.APIKEY);
-
-    let logo =
-      "https://www.bandainamcoent.ro/wp-content/themes/namco/img/logo_small.jpg";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+  elements.forEach((element) => {
+    const job_title = element.find("a").text.trim();
+    const job_link =
+      "https://www.bandainamcoent.ro" + element.find("a").attrs.href;
+    jobs.push(generateJob(job_title, job_link, "Romania", "Romania", []));
   });
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "bandainamco";
+  const logo =
+    "https://www.bandainamcoent.ro/wp-content/themes/namco/img/logo_small.jpg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
