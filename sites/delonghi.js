@@ -1,13 +1,12 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
 
-const country_id = [165, 175];
-const urls = {
+const obj = {
   url: "https://www.delonghigroup.com/en/views/ajax?_wrapper_format=drupal_ajax",
   params: {
     "MIME Type": "application/x-www-form-urlencoded; charset=UTF-8",
-    field_job_country_target_id: 175,
+    field_job_country_target_id: 115,
     view_name: "jobs_positions",
     view_display_id: "block_1",
     view_path: "/node/62",
@@ -22,61 +21,57 @@ const urls = {
 };
 
 const company = { company: "DeLonghi" };
-let finalJobs = [];
 
-const fetchData = () => {
-  let jobs = [];
-  return new Promise((resolve, reject) => {
-    for (let i = 0; i < country_id.length; i++) {
-      urls.params.field_job_country_target_id = country_id[i];
-      const s = new scraper.ApiScraper(urls.url);
-      s.headers.headers["Content-Type"] =
-        "application/x-www-form-urlencoded; charset=UTF-8";
-      s.post(urls.params).then((res) => {
-        const soup = scraper.soup(res[2].data);
-        const jobsContainer = soup.findAll("div", {
-          class: "views-row",
-        });
-        jobsContainer.forEach((job) => {
-          jobs.push(job);
-        });
-        if (i === country_id.length - 1) {
-          resolve(jobs);
-        }
-      });
-    }
-  });
-};
-
-fetchData()
-  .then((jobs) => {
-    jobs.forEach((job) => {
-      const id = uuid.v4();
+const fetchData = async () => {
+  const jobs = [];
+  const s = new scraper.ApiScraper(obj.url);
+  s.headers.headers["Content-Type"] =
+    "application/x-www-form-urlencoded; charset=UTF-8";
+  const res = await s.post(obj.params).then((res) => {
+    const soup = scraper.soup(res[2].data);
+    const jobsContainer = soup.findAll("div", {
+      class: "views-row",
+    });
+    jobsContainer.forEach((job) => {
       const job_title = job.find("h3").text;
       const job_link =
         "https://www.delonghigroup.com" + job.find("a").attrs.href;
+      const job_location = job.find("div", {
+        class: "job-country-location",
+      }).text;
+      let city_element = job_location.split(",")[1].trim();
+      const job_country = job_location.split(",")[0].trim();
 
-      finalJobs.push({
-        id: id,
+      if (city_element.toLowerCase() === "cluj") {
+        city_element = "Cluj-Napoca";
+      } else if (city_element.toLowerCase() === "bucharest") {
+        city_element = "Bucuresti";
+      }
+
+      const { foudedTown, county } = getTownAndCounty(city_element);
+
+      jobs.push({
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: "Romania",
-        country: "Romania",
+        city: foudedTown,
+        country: job_country,
+        county: county,
       });
     });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo =
-      "https://logos-world.net/wp-content/uploads/2020/12/DeLonghi-Logo-700x394.png";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });
+  return jobs;
+};
+
+fetchData().then((jobs) => {
+  console.log(JSON.stringify(jobs, null, 2));
+
+  scraper.postApiPeViitor(jobs, company);
+
+  let logo =
+    "https://logos-world.net/wp-content/uploads/2020/12/DeLonghi-Logo-700x394.png";
+
+  let postLogo = new scraper.ApiScraper("https://api.peviitor.ro/v1/logo/add/");
+  postLogo.headers.headers["Content-Type"] = "application/json";
+  postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+});
