@@ -4484,6 +4484,7 @@ const counties = [
     Cluj: [
       "Cluj-Napoca",
       "Cluj Napoca",
+      "Jucu",
       "Turda",
       "Dej",
       "Campia Turzii",
@@ -13930,22 +13931,28 @@ const removeDiacritics = (str) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
-// Get town and county from a string
 const getTownAndCounty = (town) => {
-    let county = false;
-    let foudedTown = false;
-    let townWithoutDiacritics = removeDiacritics(town.toLowerCase());
-    for (let i = 0; i < counties.length; i++) {
-      for (let j = 0; j < counties[i][Object.keys(counties[i])[0]].length; j++) {
-        if (townWithoutDiacritics === removeDiacritics(counties[i][Object.keys(counties[i])[0]][j].toLowerCase())) {
-          county = Object.keys(counties[i])[0];
-          foudedTown = counties[i][Object.keys(counties[i])[0]][j];
-          break;
-        }
-      }
-    }
+  let county = false;
+  let foudedTown = false;
+  const townWithoutDiacritics = removeDiacritics(town.toLowerCase());
 
-    return { county, foudedTown };
+  // find the entry that contains the town
+  const entry = counties.find((entry) => {
+      const cities = entry[Object.keys(entry)[0]];
+      return cities.some((city) => {
+          return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
+      });
+  });
+
+  // if the entry is found, find the town
+  if (entry) {
+      county = Object.keys(entry)[0];
+      foudedTown = entry[county].find((city) => {
+          return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
+      });
+  }
+
+  return { county, foudedTown };
 };
 
 module.exports = {
