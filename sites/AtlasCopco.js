@@ -25,7 +25,6 @@ const getJobs = async () => {
       )
     );
   });
-  console.log(jobs);
   return jobs;
 };
 
