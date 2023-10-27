@@ -1,44 +1,67 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://www.borgwarner.com/careers/job-search?indexCatalogue=default&wordsMode=0&1Country=Romania";
+const generateJob = (job_title, job_link, city, county, remote) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+  remote,
+});
 
-const company = { company: "BorgWarner" };
-let finalJobs = [];
-const s = new scraper.Scraper(url);
+const getJobs = async () => {
+  const url =
+    "https://www.borgwarner.com/careers/job-search?indexCatalogue=default&wordsMode=0&1Country=Romania";
+  const jobs = [];
 
-s.soup
-  .then((soup) => {
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("HTML");
 
-    const jobs = soup.findAll("h3", { class: "bw-global-list-h3" });
+  const jobs_objects = res.findAll("div", { class: "widget-block" });
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.text.trim();
+  jobs_objects.forEach((job) => {
+    try {
+      const job_title = job.find("h3").text.trim();
       const job_link = "https://www.borgwarner.com" + job.find("a").attrs.href;
-
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: "Romania",
-        country: "Romania",
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo = "https://upload.wikimedia.org/wikipedia/commons/4/4b/BorgWarner.jpg";
-    
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+      const city = job
+        .find("p", { class: "bw-global-list-p" })
+        .text.split("-")[0]
+        .trim();
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(city.toLowerCase())
+      );
+      if (foudedTown && county) {
+        jobs.push(generateJob(job_title, job_link, foudedTown, county, []));
+      }
+    } catch (error) {}
   });
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "BorgWarner";
+  const logo =
+    "https://upload.wikimedia.org/wikipedia/commons/4/4b/BorgWarner.jpg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs_objects = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs_objects, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
