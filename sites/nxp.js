@@ -19,10 +19,11 @@ const getAditionalCity = async (url) => {
     if (city === "Bucharest") {
       city = "Bucuresti";
     }
-    const county = getTownAndCounty(city).county;
 
-    if (county) {
-      return county;
+    const { foudedTown, county } = getTownAndCounty(city);
+
+    if (foudedTown && county) {
+      return { foudedTown, county };
     }
   }
 };
@@ -52,7 +53,7 @@ const getJobs = async () => {
     data.offset = i * limit;
     soup = await scraper.post(data);
     const { jobPostings } = soup;
-    jobPostings.forEach((jobPosting) => {
+    jobPostings.forEach(async (jobPosting) => {
       const { title, externalPath, locationsText } = jobPosting;
       const job_link_prefix = "https://nxp.wd3.myworkdayjobs.com/en-US/careers";
       const job_link = job_link_prefix + externalPath;
@@ -63,11 +64,11 @@ const getJobs = async () => {
         city = "Bucuresti";
       }
 
-      let county = getTownAndCounty(city).county;
+      let { foudedTown, county } = getTownAndCounty(city);
 
       const isCounty = async () => {
-        if (county) {
-          return county;
+        if (county && foudedTown) {
+          return { foudedTown, county };
         } else {
           const jobName = externalPath.split("/")[3];
           const url = `https://nxp.wd3.myworkdayjobs.com/wday/cxs/nxp/careers/job/${jobName}`;
@@ -75,8 +76,8 @@ const getJobs = async () => {
         }
       };
 
-      isCounty().then((county) => {
-        const job = generateJob(title, job_link, city, county);
+      isCounty().then((obj) => {
+        const job = generateJob(title, job_link, obj.foudedTown, obj.county);
         jobs.push(job);
       });
     });
