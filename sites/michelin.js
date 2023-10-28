@@ -57,7 +57,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Michelin";
   const logo = "https://michelinhr.wd3.myworkdayjobs.com/Michelin/assets/logo";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
