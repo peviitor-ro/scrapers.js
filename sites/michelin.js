@@ -1,74 +1,79 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://michelinhr.wd3.myworkdayjobs.com/wday/cxs/michelinhr/Michelin/jobs";
+const generateJob = (job_title, job_link, city, county) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+});
 
-const s = new scraper.ApiScraper(url);
-
-s.headers.headers["Content-Type"] = "application/json";
-s.headers.headers["Accept"] = "application/json";
-
-let data = {
-  appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
-  limit: 20,
-  offset: 0,
-  searchText: "",
-};
-s.post(data).then((d, err) => {
-  let step = 20;
-  let totalJobs = d.total;
-
-  const range = (start, stop, step) =>
-    Array.from(
-      { length: (stop - start) / step + 1 },
-      (_, i) => start + i * step
-    );
-
-  let finalJobs = [];
-  const company = { company: "Michelin" };
-
-  let jobs = [];
-
-  let steps = range(0, totalJobs, step);
-
-  let fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < steps.length; i++) {
-        data["offset"] = steps[i];
-        s.post(data).then((d) => {
-          let response = d.jobPostings;
-          response.forEach((element) => {
-            jobs.push(element);
-          });
-          if (jobs.length === totalJobs) {
-            resolve(jobs);
-          }
-        });
-      }
-    });
+const getJobs = async () => {
+  const url = "https://michelinhr.wd3.myworkdayjobs.com/wday/cxs/michelinhr/Michelin/jobs";
+  const scraper = new Scraper(url);
+  const additionalHeaders = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
+  const limit = 20;
+  
+  const data = {
+    appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
+    limit: 20,
+    offset: 0,
+    searchText: "",
   };
 
-  fetchData().then((jobs) => {
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.title;
-      const job_link =
-        "https://michelinhr.wd3.myworkdayjobs.com/ro-RO/Michelin" +
-        job.externalPath;
-      const city = job.locationsText;
+  const jobs = [];
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: city,
-        country: "Romania",
-      });
+  let res = await scraper.post(data);
+
+  const { total } = res;
+  let jobPostings = res.jobPostings;
+
+  const numberOfPages = Math.ceil(total / limit);
+
+  for (let i = 0; i < numberOfPages; i ++) {
+    jobPostings = res.jobPostings;
+    jobPostings.forEach((jobPosting) => {
+      const { title, externalPath, locationsText } = jobPosting;
+      const job_link_prefix = "https://michelinhr.wd3.myworkdayjobs.com/en-US/Michelin";
+      const job_link = job_link_prefix + externalPath;
+      let citys = locationsText.split(",");
+      const {foudedTown, county} = getTownAndCounty(translate_city(citys[0]));
+      jobs.push(generateJob(title, job_link, foudedTown, county));
     });
-    console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company);
-  });
-});
+    data.offset = (i + 1) * limit;
+    res = await scraper.post(data);
+    jobPostings = res.jobPostings;
+  }
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Michelin";
+  const logo = "https://michelinhr.wd3.myworkdayjobs.com/Michelin/assets/logo";
+  const apikey = "process.env.APIKEY";
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
