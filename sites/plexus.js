@@ -1,76 +1,109 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers/jobs";
+const generateJob = (job_title, job_link, city, county) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+});
 
-const s = new scraper.ApiScraper(url);
-s.headers.headers["Content-Type"] = "application/json";
-s.headers.headers["Accept"] = "application/json";
+const getAditionalCity = async (url) => {
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("JSON");
 
-let data = { appliedFacets: {}, limit: 20, offset: 0, searchText: "Romania" };
+  const citys = res.jobPostingInfo.additionalLocations;
+  for (let i = 0; i < citys.length; i++) {
+    const city = citys[i].split(",")[0];
 
-s.post(data).then((response) => {
-  let step = 20;
-  let totalJobs = response.total;
+    const { foudedTown, county } = getTownAndCounty(translate_city(city));
 
-  const range = scraper.range(0, totalJobs, step);
+    if (foudedTown && county) {
+      return { foudedTown, county };
+    }
+  }
+};
 
-  const company = { company: "Plexus" };
-  let finalJobs = [];
+const getJobs = async () => {
+  const url =
+    "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers/jobs";
+  const scraper = new Scraper(url);
 
-  const fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < range.length; i++) {
-        data["offset"] = range[i];
-        s.post(data).then((response) => {
-          let jobs = response.jobPostings;
-          jobs.forEach((job) => {
-            finalJobs.push(job);
-          });
-          if (finalJobs.length === totalJobs) {
-            resolve(finalJobs);
-          }
-        });
-      }
-    });
+  const additionalHeaders = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
 
-  let jobs = [];
+  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
 
-  fetchData()
-    .then((finalJobs) => {
-      finalJobs.forEach((job) => {
-        const id = uuid.v4();
-        const job_title = job.title;
-        const job_link =
-          "https://plexus.wd5.myworkdayjobs.com/en-US/Plexus_Careers" +
-          job.externalPath;
-        const city = job.locationsText.split(",")[0];
+  const limit = 20;
+  const data = {
+    appliedFacets: {},
+    limit: 20,
+    offset: 0,
+    searchText: "Romania",
+  };
 
-        jobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          country: "Romania",
-          city: city,
-        });
-      });
-    })
-    .then(() => {
-      console.log(JSON.stringify(jobs, null, 2));
+  let soup = await scraper.post(data);
 
-      scraper.postApiPeViitor(jobs, company);
+  const { total } = soup;
 
-      let logo =
-        "https://www.plexus.com/PlexusCDN/plexus/media/english-media/logos/Plexus-Logo-212x42.svg";
+  const numberOfPages = Math.ceil(total / limit);
 
-      let postLogo = new scraper.ApiScraper(
-        "https://api.peviitor.ro/v1/logo/add/"
+  const jobs = [];
+
+  for (let i = 0; i < numberOfPages; i += 1) {
+    const { jobPostings } = soup;
+    jobPostings.forEach(async (jobPosting) => {
+      const { title, externalPath, locationsText } = jobPosting;
+      const job_link_prefix =
+        "https://plexus.wd5.myworkdayjobs.com/en-US/Plexus_Careers";
+      const job_link = job_link_prefix + externalPath;
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(locationsText.split(",")[0])
       );
-      postLogo.headers.headers["Content-Type"] = "application/json";
-      postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+
+      if (foudedTown && county) {
+        jobs.push(generateJob(title, job_link, foudedTown, county));
+      } else {
+        const { foudedTown, county } = await getAditionalCity(
+          "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers" +
+            externalPath
+        );
+        jobs.push(generateJob(title, job_link, foudedTown, county));
+      }
     });
-});
+
+    data.offset = (i + 1) * limit;
+    soup = await scraper.post(data);
+  }
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Plexus";
+  const logo =
+    "https://www.plexus.com/PlexusCDN/plexus/media/english-media/logos/Plexus-Logo-212x42.svg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
