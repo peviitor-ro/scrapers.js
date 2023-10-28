@@ -1,55 +1,65 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://ro-jobs.about.ikea.com/search-jobs/results?CurrentPage=1&RecordsPerPage=100&ShowRadius=False&IsPagination=False&FacetType=0&FacetFilters%5B0%5D.ID=798549&FacetFilters%5B0%5D.FacetType=2&FacetFilters%5B0%5D.Count=16&FacetFilters%5B0%5D.Display=Rom%C3%A2nia&FacetFilters%5B0%5D.IsApplied=true&SearchResultsModuleName=Search+Results+-+REFRESH&SearchFiltersModuleName=Search+Filters+-+REFRESH&SortCriteria=0&SortDirection=0&SearchType=5&ResultsType=0";
+const generateJob = (job_title, job_link, country, county, city) => ({
+  job_title,
+  job_link,
+  country,
+  county,
+  city,
+  remote: [],
+});
 
-const company = { company: "IKEA" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url =
+    "https://jobs.ikea.com/en/search-jobs/Romania/22908/2/798549/46/25/50/2";
+  const scraper = new Scraper(url);
+  const soup = await scraper.get_soup("HTML");
 
-const s = new scraper.ApiScraper(url);
-s.headers.headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
+  const jobs = [];
 
-s.get()
-  .then((response) => {
-    const jobs = scraper
-      .soup(response.results)
-      .findAll("li", { class: "search-results-tile-item" });
+  const jobsElements = soup.findAll("li", { class: "job-list__item" });
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job
-        .find("h3", { class: "tile-item-title" })
-        .text.trim();
-      const job_link =
-        "https://ro-jobs.about.ikea.com" + job.find("a").attrs.href;
-      const city = job
-        .find("span", { class: "tile-job-location" })
-        .text.split(",")[0]
-        .trim();
+  jobsElements.forEach((job) => {
+    const job_title = job.find("h3").text.replace("&#xA;", "").trim();
+    const job_link = "https://jobs.ikea.com" + job.find("a").attrs.href;
+    const city = job
+      .find("span", { class: "job-list__location" })
+      .text.split(",")[0]
+      .trim();
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: city,
-        country: "Romania",
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo =
-      "https://tbcdn.talentbrew.com/company/22908/img/logo/logo-10872-12036.png";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
+    const { foudedTown, county } = getTownAndCounty(
+      translate_city(city.toLowerCase())
     );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+
+    jobs.push(generateJob(job_title, job_link, "Romania", county, foudedTown));
   });
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "IKEA";
+  const logo = "https://tbcdn.talentbrew.com/company/22908/img/logo/logo-10872-12036.png";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+

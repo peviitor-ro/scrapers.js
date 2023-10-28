@@ -1,4 +1,3 @@
-const Jssoup = require("jssoup").default;
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { findCity, translate_city, replace_char } = require("../utils.js");
