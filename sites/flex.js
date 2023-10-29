@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   " https://flextronics.wd1.myworkdayjobs.com/wday/cxs/flextronics/Careers/jobs";
@@ -26,7 +27,7 @@ s.post(data).then((response) => {
   let finalJobs = [];
 
   const fetchData = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       for (let i = 0; i < range.length; i++) {
         data["offset"] = range[i];
         s.post(data).then((response) => {
@@ -47,20 +48,23 @@ s.post(data).then((response) => {
   fetchData()
     .then((finalJobs) => {
       finalJobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link =
           "https://flextronics.wd1.myworkdayjobs.com/ro-RO/Careers" +
           job.externalPath;
-        const city = job.locationsText.split(",")[0];
+        const city = job.locationsText.split(",")[1];
+
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.trim().toLowerCase())
+        );
 
         jobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
           country: "Romania",
-          city: city,
+          city: foudedTown,
+          county: county,
         });
       });
     })
