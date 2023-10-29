@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url = "https://ag.wd3.myworkdayjobs.com/wday/cxs/ag/Airbus/jobs";
 
@@ -41,19 +42,26 @@ s.post(data).then((response) => {
   fetchData()
     .then((finalJobs) => {
       finalJobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link =
           "https://ag.wd3.myworkdayjobs.com/en-US/Airbus" + job.externalPath;
-        const city = job.locationsText.split(",")[0];
+        let city = job.locationsText.split(",")[0];
+
+        if (city === "Bucarest") {
+          city = "Bucuresti";
+        }
+
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase())
+        );
 
         jobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
           country: "Romania",
-          city: city,
+          city: foudedTown,
+          county: county,
         });
       });
     })
