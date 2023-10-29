@@ -1,39 +1,59 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 
-const url = "https://www.cognizantsoftvision.com/job-search/?location=romania";
+const generateJob = (job_title, job_link, country, county, city) => ({
+  job_title,
+  job_link,
+  country,
+  county: ["Maramures", "București", "Cluj", "Iași", "Timiș"],
+  city: ["Baia Mare", "București", "Cluj-Napoca", "Iași", "Timișoara"],
+  remote: [],
+});
 
-const s = new scraper.Scraper(url);
+const getJobs = async () => {
+  const url =
+    "https://www.cognizantsoftvision.com/job-search/?location=romania";
+  const scraper = new Scraper(url);
 
-let finalJobs = [];
-const company = { company: "CognizantSoftvision" };
+  const res = await scraper.get_soup("HTML");
 
-s.soup
-  .then((soup) => {
-    const json = JSON.parse(
-      soup.find("script", { type: "application/json" }).text
-    );
+  const jobs = [];
 
-    json.props.pageProps.jobOpenings.jobs.forEach((job) => {
-      if (job.location == "Romania") {
-        const id = uuid.v4();
-        const job_title = job.title;
-        const job_link = "https://www.cognizantsoftvision.com" + job.link;
-        const city = job.location;
+  const json = JSON.parse(
+    res.find("script", { type: "application/json" }).text
+  );
 
-        finalJobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          city: city,
-          country: "Romania",
-        });
-      }
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company);
+  json.props.pageProps.jobOpenings.jobs.forEach((job) => {
+    if (job.location == "Romania") {
+      const job_title = job.title;
+      const job_link = "https://www.cognizantsoftvision.com" + job.link;
+      jobs.push(generateJob(job_title, job_link, "Romania"));
+    }
   });
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "CognizantSoftvision";
+  const logo =
+    "https://www.cognizantsoftvision.com/react-images/logos/logo-header.png";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
