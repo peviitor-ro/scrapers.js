@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://jobs.majorel.com/romania/en/jobs?lang=en&api=jobs&site=28&_";
@@ -10,7 +11,7 @@ let finalJobs = [];
 let pages = 1;
 
 const fetchData = (pages) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const url = `https://jobs.majorel.com/romania/en/jobs?pg=${pages}&lang=en&api=jobs&site=28&_`;
     const s = new scraper.ApiScraper(url);
 
@@ -33,19 +34,21 @@ async function data() {
   } while (fetchedJobs.length > 0);
 
   jobs.forEach((job) => {
-    const id = uuid.v4();
     const job_title = job.name;
     const job_link = job.url;
-    let city = "Romania";
+    let city = ["Bucuresti", "Brasov", "Sibiu"];
+    let countys = ["Bucuresti", "Brasov", "Sibiu"];
 
-    if (job.location != null) {
-      if (job.location.name != "") {
-        city = job.location.name;
-      }
+    if (job.location != null && job.location.name != "") {
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(job.location.name.toLowerCase())
+      );
+
+      city = foudedTown;
+      countys = county;
     }
 
     finalJobs.push({
-      id: id,
       job_title: job_title,
       job_link: job_link,
       company: company.company,
@@ -55,7 +58,7 @@ async function data() {
   });
 
   console.log(JSON.stringify(finalJobs, null, 2));
-  scraper.postApiPeViitor(finalJobs, company,process.env.APIKEY);
+  scraper.postApiPeViitor(finalJobs, company, process.env.APIKEY);
   let logo =
     "https://www.majorel.com/wp-content/themes/majorel/_frontend/assets/icons/logo.svg";
 
