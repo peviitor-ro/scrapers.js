@@ -1,6 +1,6 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
 
 const url =
   "https://leoni.taleo.net/careersection/rest/jobboard/searchjobs?lang=ro&portal=101430233";
@@ -59,19 +59,20 @@ s.post(data).then((res) => {
         s.post(data).then((res) => {
           const jobs = res.requisitionList;
           jobs.forEach((job) => {
-            const id = uuid.v4();
             const job_title = job.column[0].trim();
             const job_link = `https://leoni.taleo.net/careersection/ro_romania/jobdetail.ftl?job=${job.contestNo}&tz=GMT%2B03%3A00&tzname=Europe%2FBucharest`;
             const city = job.column[2]
               .replace(/[\["(.*)"\]]/g, "")
               .split("-")[2];
 
+            const { foudedTown, county } = getTownAndCounty(city);
+
             finalJobs.push({
-              id: id,
               job_title: job_title,
               job_link: job_link,
               company: company.company,
-              city: city,
+              city: foudedTown,
+              county: county,
               country: "Romania",
             });
 
