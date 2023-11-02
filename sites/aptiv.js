@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const apiUrl = "https://essearchapi-na.hawksearch.com/api/v2/search/";
 
@@ -32,24 +33,39 @@ s.post(data).then((d, err) => {
   let totalJobs = d.Pagination.NofResults;
 
   const fetchData = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       for (let i = 1; i <= pages; i++) {
         data.PageNo = i;
-        s.post(data).then((d, err) => {
+        s.post(data).then((d) => {
           d.Results.forEach((job) => {
-            const id = uuid.v4();
             const job_title = job.Document.title[0];
             const job_link = job.Document.link[0];
-            const city = job.Document.city[0];
+            const city = job.Document.city[0].split("-");
+            let foudedTown;
+            let county;
 
-            finalJobs.push({
-              id: id,
-              job_title: job_title,
-              job_link: job_link,
-              company: company.company,
-              city: city,
-              country: "Romania",
-            });
+            if (city.length > 1) {
+              foudedTown = city[0].trim();
+              county = city[1].trim();
+            } else {
+              const obj = getTownAndCounty(
+                translate_city(city[0].toLowerCase().trim())
+              );
+
+              foudedTown = obj.foudedTown;
+              county = obj.county;
+            }
+
+            if (foudedTown && county) {
+              finalJobs.push({
+                job_title: job_title,
+                job_link: job_link,
+                company: company.company,
+                city: foudedTown,
+                county: county,
+                country: "Romania",
+              });
+            }
           });
           if (finalJobs.length === totalJobs) {
             resolve(finalJobs);
