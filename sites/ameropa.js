@@ -1,25 +1,26 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
 const url = "https://www.ameropa.ro/ro/joburi-disponibile/";
 
 const company = { company: "ameropa" };
 let finalJobs = [];
 const SUFFIX = "#:~:text=";
-const apiKey = process.env.KNOX
+const apiKey = process.env.KNOX;
 const s = new scraper.Scraper(url);
 
 s.soup
   .then((soup) => {
     const jobs = soup.findAll("a", { class: "elementor-accordion-title" });
     jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.text.trim(); 
+      const job_title = job.text.trim();
       const job_link = url + SUFFIX + job_title;
 
+      if (job_title === "Momentan nu sunt posturi disponibile") {
+        return;
+      }
+
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
