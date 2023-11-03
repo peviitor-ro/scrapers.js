@@ -1,10 +1,13 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, country, city) => ({
+const generateJob = (job_title, job_link, country, city, county) => ({
   job_title,
   job_link,
   country,
   city,
+  county,
 });
 
 const getJobs = async () => {
@@ -16,12 +19,23 @@ const getJobs = async () => {
   const json = res.jobs;
   const jobs = [];
   json.forEach((item) => {
+
+    let city = item.Cities;
+    if (city === "Cluj") {
+      city = "Cluj-Napoca";
+    }
+
+    const { foudedTown, county } = getTownAndCounty(
+      translate_city(city.toLowerCase())
+    );
+
     jobs.push(
       generateJob(
         item.Title,
         "https://www.atlascopco.com" + item.path,
         item.LegEntCountry,
-        item.Cities
+        foudedTown,
+        county
       )
     );
   });
