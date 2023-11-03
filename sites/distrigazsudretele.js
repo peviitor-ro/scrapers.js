@@ -2,40 +2,39 @@
 const scraper = require("../peviitor_scraper.js");
 const uuid = require("uuid");
 
-const url =
-  "https://api.smartrecruiters.com/v1/companies/metgroup/postings?limit=100&country=ro";
+const url = "https://www.distrigazsud-retele.ro/cariere/posturi-disponibile/";
 
-const company = { company: "METGroup" };
+const company = { company: "DistrigazSudRetele" };
 let finalJobs = [];
 
-const s = new scraper.ApiScraper(url);
+const s = new scraper.Scraper(url);
 
-s.get()
-  .then((response) => {
-    const jobs = response.content;
+s.soup
+  .then((soup) => {
+    const jobs = soup.find("div", { class: "general-text" }).findAll("a");
 
-    jobs.forEach((job) => {
+    for (let i = 0; i < jobs.length - 2; i++) {
       const id = uuid.v4();
-      const job_title = job.name;
-      const job_link = "https://jobs.smartrecruiters.com/METGroup/" + job.id;
-      const city = job.location.city;
+      const job_title = jobs[i].text;
+      const job_link = jobs[i].attrs.href;
 
       finalJobs.push({
         id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: city,
+        city: "Romania",
         country: "Romania",
       });
-    });
+    }
   })
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo = "https://group.met.com/media/3f4d1h1o/met-logo.svg";
+    let logo =
+      "https://www.distrigazsud-retele.ro/wp-content/themes/distrigaz/images/logo-footer.png";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"
