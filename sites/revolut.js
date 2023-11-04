@@ -1,6 +1,5 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
 const url = "https://www.revolut.com/careers/?city=Romania+-+Remote";
 
@@ -14,20 +13,19 @@ s.soup
     const jobsObject = soup.find("script", { id: "__NEXT_DATA__" });
 
     const jobs = JSON.parse(jobsObject.text).props.pageProps.positions;
-
     jobs.forEach((job) => {
       job.locations.forEach((location) => {
         if (location.country === "Romania") {
-          const id = uuid.v4();
+          console.log(location);
           const job_title = job.text;
           const job_link = "https://www.revolut.com/careers/position/" + job.id;
+          const remote = location.type === "remote" ? ["Remote"] : [];
 
           finalJobs.push({
-            id: id,
             job_title: job_title,
             job_link: job_link,
             company: company.company,
-            city: "Romania",
+            remote: remote,
             country: "Romania",
           });
         }
