@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url = "https://jobs.continental.com/en/api/result-list/pagetype-jobs/";
 
@@ -28,7 +29,7 @@ s.post(data)
     let jobs = [];
 
     let fetchData = () => {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         for (let i = 1; i <= totalPages; i++) {
           data["tx_conjobs_api[currentPage]"] = i;
           s.post(data).then((d) => {
@@ -46,18 +47,21 @@ s.post(data)
 
     fetchData().then((jobs) => {
       jobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link = job.absoluteUrl;
         const city = job.cityLabel;
         const country = job.countryLabel;
 
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.trim().toLowerCase())
+        );
+
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
-          city: city,
+          city: foudedTown,
+          county: county,
           country: country,
         });
       });
