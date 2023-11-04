@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://eaton.eightfold.ai/api/apply/v2/jobs?start=10&num=29&location=romania";
@@ -37,27 +38,38 @@ s.get().then((response) => {
   fetchPages()
     .then((jobs) => {
       jobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.name;
         const job_link = job.canonicalPositionUrl;
         let city;
+        let county;
         let locations = job.locations;
         locations.forEach((location) => {
           if (location.includes("Romania") || location.includes("ROU")) {
             try {
               city = location.split(",")[0];
+              const obj = getTownAndCounty(
+                translate_city(city.trim().toLowerCase())
+              );
+              city = obj.foudedTown;
+              county = obj.county;
             } catch (error) {
               city = location;
+
+              const obj = getTownAndCounty(
+                translate_city(city.trim().toLowerCase())
+              );
+              city = obj.foudedTown;
+              county = obj.county;
             }
           }
         });
 
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
           city: city,
+          county: county,
           country: "Romania",
         });
       });
