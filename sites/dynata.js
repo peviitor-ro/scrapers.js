@@ -102,7 +102,7 @@ const getJobs = async () => {
     data.offset = i * limit;
     soup = await scraper.post(data);
   }
-  console.log(jobs);
+
   return jobs;
 };
 
@@ -121,8 +121,8 @@ const getParams = () => {
 
 const run = async () => {
   const jobs = await getJobs();
-  // const params = getParams();
-  // postApiPeViitor(jobs, params);
+  const params = getParams();
+  postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {
