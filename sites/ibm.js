@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://jobsapi-internal.m-cloud.io/api/stjobbulk?organization=2242&limitkey=4A8B5EF8-AA98-4A8B-907D-C21723FE4C6B&facet=publish_to_cws:true&fields=id,ref,url,brand,title,level,open_date,department,sub_category,primary_city,primary_country,primary_category,addtnl_locations,language";
@@ -16,21 +17,33 @@ s.get()
 
     jobs.forEach((job) => {
       if (job.primary_country === "RO") {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link = "https://careers.ibm.com/job/" + job.id;
-        let city = "Romania";
+        const citys = [];
+        const countys = [];
 
-        try {
-          city = job.addtnl_locations[0].addtnl_city;
-        } catch (error) {}
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(job.primary_city.trim().toLowerCase())
+        );
+
+        citys.push(foudedTown);
+        countys.push(county);
+
+        const aditional_locations = job.addtnl_locations;
+
+        if (aditional_locations) {
+          aditional_locations.forEach((location) => {
+            citys.push(location.addtnl_city);
+            countys.push(location.addtnl_state);
+          });
+        }
 
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
-          city: city,
+          city: citys,
+          county: countys,
           country: "Romania",
         });
       }
