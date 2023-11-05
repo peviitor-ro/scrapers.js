@@ -8179,6 +8179,8 @@ const counties = [
   },
   {
     Ilfov: [
+      "Dragomiresti Vale",
+      "Dragomiresti Deal",
       "Voluntari",
       "Buftea",
       "Pantelimon",
@@ -13938,24 +13940,24 @@ const getTownAndCounty = (town) => {
 
   // find the entry that contains the town
   const entry = counties.find((entry) => {
-      const cities = entry[Object.keys(entry)[0]];
-      return cities.some((city) => {
-          return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
-      });
+    const cities = entry[Object.keys(entry)[0]];
+    return cities.some((city) => {
+      return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
+    });
   });
 
   // if the entry is found, find the town
   if (entry) {
-      county = Object.keys(entry)[0];
-      foudedTown = entry[county].find((city) => {
-          return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
-      });
+    county = Object.keys(entry)[0];
+    foudedTown = entry[county].find((city) => {
+      return removeDiacritics(city.toLowerCase()) === townWithoutDiacritics;
+    });
   }
 
   return { county, foudedTown };
 };
 
 module.exports = {
-    getTownAndCounty,
-    counties
-}
+  getTownAndCounty,
+  counties,
+};
