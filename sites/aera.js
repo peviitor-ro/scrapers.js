@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url = "https://www.aeratechnology.com/careers";
 
@@ -22,7 +23,6 @@ s.soup
         ].trim();
 
       if (country == "Romania") {
-        const id = uuid.v4();
         const job_title = job.find("h3").text.trim();
         const job_link = job.find("a").attrs.href;
         const city = job
@@ -30,12 +30,16 @@ s.soup
           .text.split(",")[0]
           .trim();
 
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase())
+        );
+
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
-          city: city,
+          city: foudedTown,
+          county: county,
           country: country,
         });
       }
