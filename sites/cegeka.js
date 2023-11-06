@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 let url = "https://www.cegeka.com/en/ro/jobs/all-jobs?";
 
@@ -16,18 +17,35 @@ s.soup
     const jobs = JSON.parse(jobsObject[0].replace("let vacancies = ", ""));
 
     jobs.forEach((job) => {
-      const id = uuid.v4();
       const job_title = job.header_data.vacancy_title;
       const job_link = job.slug;
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        country: "Romania",
-        city: "Romania",
+      const citys = [];
+      const countys = [];
+
+      const locations = JSON.parse(job.header_data.filter_location);
+
+      locations.forEach((location) => {
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(location.city.toLowerCase().trim())
+        );
+
+        if (foudedTown && county) {
+          citys.push(foudedTown);
+          countys.push(county);
+        }
       });
+
+      if (citys.length >= 1 && countys.length >= 1) {
+        finalJobs.push({
+          job_title: job_title,
+          job_link: job_link,
+          company: company.company,
+          country: "Romania",
+          city: citys,
+          county: countys,
+        });
+      }
     });
   })
   .then(() => {
