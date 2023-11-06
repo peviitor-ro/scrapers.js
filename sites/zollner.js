@@ -1,5 +1,6 @@
 "use strict";
 const { ApiScraper } = require("../peviitor_scraper.js");
+const scraper = require("../peviitor_scraper.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
 
