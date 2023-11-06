@@ -1,29 +1,41 @@
 "use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { ApiScraper } = require("../peviitor_scraper.js");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url = "https://www.zollner.ro/ro/cariera/posturi-disponibile";
+const url = "https://jobs.b-ite.com/api/v1/postings/search";
 
 const company = { company: "Zollner" };
 let finalJobs = [];
 
-const s = new scraper.Scraper(url);
+const data = {
+  key: "46931c94b35f1165cae2df35cf4574a747be844e",
+  channel: 0,
+  locale: "ro",
+  sort: { by: "title", order: "asc" },
+  origin: "https://www.zollner.ro/ro/cariera/posturi-disponibile",
+  page: { num: 1000, offset: 0 },
+};
 
-s.soup
-  .then((soup) => {
-    const jobs = soup.find("div", { id: "c4173" }).findAll("li");
+const s = new ApiScraper(url);
+
+s.post(data)
+  .then((data) => {
+    const jobs = data.jobPostings;
 
     jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("a").text.trim();
-      const job_link = "https://www.zollner.ro" + job.find("a").attrs.href;
+      const job_title = job.title;
+      const job_link = job.url;
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(job.jobSite.toLowerCase())
+      );
 
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: "Romania",
+        city: foudedTown,
+        county: county,
         country: "Romania",
       });
     });
@@ -33,7 +45,8 @@ s.soup
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo = "https://www.zollner.ro/fileadmin/user_upload/00_Startseite/logo.svg";
+    let logo =
+      "https://www.zollner.ro/fileadmin/user_upload/00_Startseite/logo.svg";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"
