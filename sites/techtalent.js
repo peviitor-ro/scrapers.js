@@ -28,7 +28,8 @@ s.soup
         city = ["Cluj-Napoca", "Bucuresti", "Brasov"];
         county = ["Cluj", "Bucuresti", "Brasov"];
       } else if (city === "remote") {
-        remote = ["remote"];
+        remote = ["Remote"];
+        city = "";
       } else {
         const obj = getTownAndCounty(translate_city(city.toLowerCase()));
         city = obj.foudedTown;
