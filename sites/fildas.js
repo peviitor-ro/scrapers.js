@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url = "https://www.fildas.ro/cariere/";
 
@@ -14,16 +15,29 @@ s.soup
   .then((soup) => {
     const jobs = soup.findAll("h2");
     jobs.forEach((job) => {
-      const id = uuid.v4();
       const job_title = job.text.trim().split("&#8211;")[0];
       const job_link = url + SUFFIX + job_title;
-      const city = job.text.trim().split("&#8211;")[1]
+      const locations = job.text.trim().split("&#8211;")[1].split(",")
+      const citys = [];
+      const countys = [];
+
+      locations.forEach((location) => {
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(location.toLowerCase().trim())
+        );
+
+        if (foudedTown && county) {
+          citys.push(foudedTown);
+          countys.push(county);
+        }
+      });
+
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: city,
+        city: citys,
+        county: countys,
         country: "Romania",
       });
     });
