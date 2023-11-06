@@ -65,6 +65,7 @@ const translate_city = (city) => {
   // Populate this object with the cities that need translation
   const cities = {
     bucharest: "Bucuresti",
+    cluj: "Cluj-Napoca",
   };
 
   if (cities[city.toLowerCase()]) {
