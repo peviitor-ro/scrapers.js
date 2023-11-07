@@ -1,11 +1,14 @@
 const Jssoup = require("jssoup").default;
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, city) => ({
+const generateJob = (job_title, job_link, city, county) => ({
   job_title,
   job_link,
   country: "Romania",
   city,
+  county,
 });
 
 const getJobs = async () => {
@@ -29,10 +32,21 @@ const getJobs = async () => {
     const job_link = `https://careers.abbvie.com${
       item.find("a", { class: "search-results__job-link" }).attrs.href
     }`;
-    const city = item
+    let city = item
       .find("span", { class: "job-location" })
       .text.split(",")[0]
       .trim();
+
+    if (city === "Timi&#x219;oara") {
+      city = "Timisoara";
+    }
+
+    const { foudedTown, county } = getTownAndCounty(
+      translate_city(city.toLowerCase())
+    );
+
+    console.log(foudedTown, county);
+
     const job = generateJob(job_title, job_link, city);
     jobs.push(job);
   });
@@ -60,7 +74,7 @@ const run = async () => {
 };
 
 if (require.main === module) {
-    run();
+  run();
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
