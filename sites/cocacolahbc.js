@@ -28,14 +28,16 @@ s.soup
       const remote = [];
       if (cityArray && cityArray.length >= 2) {
         const obj = getTownAndCounty(
-          translate_city(cityArray[1].toLowerCase())
+          translate_city(cityArray[1]
+            .replace("-", " ")
+            .toLowerCase())
         );
         city = obj.foudedTown;
         county = obj.county;
       } else {
         remote.push("Remote");
       }
-      console.log(city, county, remote);
+
       finalJobs.push({
         job_title: job_title,
         job_link: job_link,
