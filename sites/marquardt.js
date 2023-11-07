@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://marquardt-group.csod.com/ux/ats/careersite/5/home?c=marquardt-group&country=ro";
@@ -57,20 +58,27 @@ s.soup.then((soup) => {
       const jobs = d.data.requisitions;
 
       jobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.displayJobTitle;
         const job_link =
           "https://marquardt-group.csod.com/ux/ats/careersite/5/home/requisition/" +
           job.requisitionId +
           "?c=marquardt-group";
-        const city = job.locations[0].city;
+        let city = job.locations[0].city;
+
+        if (!city) {
+          city = "Sibiu";
+        }
+
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase().trim())
+        );
 
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           country: "Romania",
-          city: city,
+          city: foudedTown,
+          county: county,
           company: company.company,
         });
       });
