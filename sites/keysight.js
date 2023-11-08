@@ -26,7 +26,9 @@ s.soup
         .text.split(",")[0]
         .trim();
 
-      const { foudedTown, county } = getTownAndCounty(translate_city(city));
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(city.toLowerCase())
+      );
 
       if (foudedTown && county) {
         finalJobs.push({
