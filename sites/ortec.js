@@ -31,6 +31,7 @@ fetch(url, {
         job_link: `https://ortec.com/en/careers/find-jobs/career/jobs?id=${jobid}`,
         company: company.company,
         city: 'Bucuresti',
+        county: 'Bucuresti',
         country: "Romania",
       });
     });
