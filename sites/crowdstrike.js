@@ -2,8 +2,6 @@ const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
 
-let time_to_wait = 0;
-
 const generateJob = (job_title, job_link, city, county, remote) => ({
   job_title,
   job_link,
@@ -14,7 +12,6 @@ const generateJob = (job_title, job_link, city, county, remote) => ({
 });
 
 const getAditionalCity = async (url) => {
-  time_to_wait++;
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("JSON");
 
@@ -25,23 +22,27 @@ const getAditionalCity = async (url) => {
       ? ["Remote"]
       : [];
 
-  for (let i = 0; i < citys.length; i++) {
-    const splits = citys[i].split("-");
-    let city = translate_city(splits[splits.length - 1].trim().toLowerCase());
-    let finded_city = "";
-    let finded_county = "";
+  if (citys) {
+    for (let i = 0; i < citys.length; i++) {
+      const splits = citys[i].split("-");
+      let city = translate_city(splits[splits.length - 1].trim().toLowerCase());
+      let finded_city = "";
+      let finded_county = "";
 
-    if (city.trim().toLowerCase() === "remote") {
-      finded_county = "";
-      finded_city = "Romania";
-    } else {
-      const { foudedTown, county } = getTownAndCounty(city);
-      if (county) {
-        finded_county = county;
-        finded_city = foudedTown;
+      if (city.trim().toLowerCase() === "remote") {
+        finded_county = "";
+        finded_city = "Romania";
+      } else {
+        const { foudedTown, county } = getTownAndCounty(city);
+        if (county) {
+          finded_county = county;
+          finded_city = foudedTown;
+        }
       }
+      return { foudedTown: finded_city, county: finded_county, remote };
     }
-    return { foudedTown: finded_city, county: finded_county, remote };
+  } else {
+    return { foudedTown: "", county: "", remote };
   }
 };
 
@@ -71,39 +72,42 @@ const getJobs = async () => {
     data.offset = i * limit;
     soup = await scraper.post(data);
     const { jobPostings } = soup;
-    jobPostings.forEach((jobPosting) => {
-      const { title, externalPath, locationsText } = jobPosting;
-      const job_link_prefix =
-        "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
-      const job_link = job_link_prefix + externalPath;
-      const separatorIndex = locationsText.indexOf(" ");
-      let city = translate_city(locationsText.substring(0, separatorIndex));
 
-      let { foudedTown, county } = getTownAndCounty(city);
+    await Promise.all(
+      jobPostings.map(async (jobPosting) => {
+        const { title, externalPath, locationsText } = jobPosting;
+        const job_link_prefix =
+          "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
+        const job_link = job_link_prefix + externalPath;
+        const separatorIndex = locationsText.indexOf(" ");
+        let city = translate_city(locationsText.substring(0, separatorIndex));
 
-      const isCounty = async () => {
-        if (county) {
-          const res = {
-            foudedTown,
-            county,
-            remote: [],
-          };
-          return res;
-        } else {
-          const jobName = externalPath.split("/");
-          const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
-            jobName[jobName.length - 1]
-          }`;
-          return await getAditionalCity(url);
-        }
-      };
+        let { foudedTown, county } = getTownAndCounty(city);
 
-      isCounty().then((res) => {
+        const isCounty = async () => {
+          if (county) {
+            const res = {
+              foudedTown,
+              county,
+              remote: [],
+            };
+            return res;
+          } else {
+            const jobName = externalPath.split("/");
+            const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
+              jobName[jobName.length - 1]
+            }`;
+            return await getAditionalCity(url);
+          }
+        };
+
+        const res = await isCounty();
+
         jobs.push(
           generateJob(title, job_link, res.foudedTown, res.county, res.remote)
         );
-      });
-    });
+      })
+    );
   }
   return jobs;
 };
@@ -112,7 +116,7 @@ const getParams = () => {
   const company = "CrowdStrike";
   const logo =
     "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
@@ -123,9 +127,8 @@ const getParams = () => {
 
 const run = async () => {
   const jobs = await getJobs();
-  setTimeout(() => {
-    postApiPeViitor(jobs, getParams());
-  }, time_to_wait * 200);
+  const params = getParams();
+  postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {
