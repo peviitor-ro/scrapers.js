@@ -4001,6 +4001,7 @@ const counties = [
   {
     Calarasi: [
       "Calarasi",
+      "Lehliu Gara",
       "Oltenita",
       "Borcea",
       "Chirnogi",
@@ -10937,6 +10938,7 @@ const counties = [
   {
     "Satu Mare": [
       "Satu Mare",
+      "Negresti Oas",
       "Carei",
       "Negresti-Oas",
       "Tasnad",
@@ -11783,7 +11785,7 @@ const counties = [
   {
     Teleorman: [
       "Alexandria",
-      "Rosiori de Vede",
+      "Rosiorii de Vede",
       "Turnu Magurele",
       "Zimnicea",
       "Videle",
