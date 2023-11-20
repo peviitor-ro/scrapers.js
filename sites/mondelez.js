@@ -1,80 +1,119 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://www.mondelezinternational.com/careers/jobs?term=&countrycode=RO";
+const getAditionalCity = async (url) => {
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("JSON");
 
-const company = { company: "Mondelez" };
-let finalJobs = [];
+  const citys_elements = [
+    ...res.jobPostingInfo.additionalLocations,
+    res.jobPostingInfo.location,
+  ];
+  const citys = [];
+  const countys = [];
 
-const s = new scraper.Scraper(url);
-
-s.soup.then((response) => {
-  const totalJobs = parseInt(
-    response.find("p", { class: "results-status" }).text.split(" ")[0]
-  );
-
-  const pages = scraper.range(1, totalJobs, 20);
-
-  let fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < pages.length; i++) {
-        let pageUrl = `${url}&page=${i + 1}`;
-
-        const s = new scraper.Scraper(pageUrl);
-        s.soup.then((response) => {
-          const jobs = response.findAll("div", { class: "result" });
-          jobs.forEach((job) => {
-            let location = job
-              .find("p", { class: "subtitle" })
-              .find("a")
-              .text.split(",");
-
-            const id = uuid.v4();
-            const job_title = job.find("a").text;
-            const job_link =
-              "https://www.mondelezinternational.com" +
-              job.find("a").attrs.href;
-
-            let city;
-
-            if (location.length > 1 && location[1].trim() === "Romania") {
-              city = location[0].trim();
-            } else {
-              city = "Romania";
-            }
-
-            finalJobs.push({
-              id: id,
-              job_title: job_title,
-              job_link: job_link,
-              company: company.company,
-              city: city,
-              country: "Romania",
-            });
-
-            if (totalJobs === finalJobs.length) {
-              resolve(finalJobs);
-            }
-          });
-        });
-      }
-    });
-  };
-
-  fetchData().then((finalJobs) => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-
-    scraper.postApiPeViitor(finalJobs, company);
-
-    let logo =
-      "https://www.mondelezinternational.com/-/media/Mondelez/Media/Asset-Library/logos/MDLZlogo.jpg";
-
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
+  for (let city of citys_elements) {
+    const { foudedTown, county } = getTownAndCounty(
+      translate_city(
+        city
+          .split(",")[0]
+          .replace("Business Office - ", "")
+          .trim()
+          .toLowerCase()
+      )
     );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
+
+    if (foudedTown && county) {
+      citys.push(foudedTown);
+      countys.push(county);
+    }
+  }
+
+  return { citys, countys };
+};
+
+const generateJob = (job_title, job_link, city, county) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
 });
+
+const getJobs = async () => {
+  const url = "https://wd3.myworkdaysite.com/wday/cxs/mdlz/External/jobs";
+  const scraper = new Scraper(url);
+  const additionalHeaders = {
+    "Content-Type": "application/json",
+  };
+  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
+  const limit = 20;
+  const data = {
+    appliedFacets: { locationCountry: ["f2e609fe92974a55a05fc1cdc2852122"] },
+    limit: 20,
+    offset: 0,
+    searchText: "",
+  };
+  let soup = await scraper.post(data);
+  const { total } = soup;
+  const numberOfPages = Math.floor(
+    total % limit === 0 ? total / limit : total / limit + 1
+  );
+  const jobs = [];
+  for (let i = 0; i < numberOfPages; i += 1) {
+    const { jobPostings } = soup;
+    await Promise.all(
+      jobPostings.map(async (jobPosting) => {
+        const { title, externalPath, locationsText } = jobPosting;
+        const job_link_prefix =
+          "https://wd3.myworkdaysite.com/en-US/recruiting/mdlz/External";
+        const job_link = job_link_prefix + externalPath;
+        const city = locationsText.split(",")[0];
+
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase())
+        );
+
+        if (foudedTown && county) {
+          jobs.push(generateJob(title, job_link, foudedTown, county));
+        } else {
+          const jobName = externalPath.split("/")[3];
+          const url = `https://wd3.myworkdaysite.com/wday/cxs/mdlz/External/job/${jobName}`;
+          const { citys, countys } = await getAditionalCity(url);
+
+          jobs.push(generateJob(title, job_link, citys, countys));
+        }
+      })
+    );
+
+    data.offset = i * limit;
+    soup = await scraper.post(data);
+  }
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Mondelez";
+  const logo =
+    "https://wd3.myworkdaysite.com/recruiting/mdlz/External/assets/logo";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

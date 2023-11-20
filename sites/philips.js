@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://philips.wd3.myworkdayjobs.com/wday/cxs/philips/jobs-and-careers/jobs";
@@ -26,9 +27,9 @@ s.post(data).then((response) => {
   const range = scraper.range(0, totalJobs, step);
 
   const fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < range.length; i++) {
-        data["offset"] = range[i];
+    return new Promise((resolve) => {
+      for (let step of range) {
+        data["offset"] = step * 20;
         s.post(data).then((response) => {
           let jobs = response.jobPostings;
           jobs.forEach((job) => {
@@ -47,21 +48,34 @@ s.post(data).then((response) => {
   fetchData()
     .then((finalJobs) => {
       finalJobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link =
           "https://philips.wd3.myworkdayjobs.com/en-US/jobs-and-careers" +
           job.externalPath;
-        const city = job.locationsText.split(",")[0];
+        const city = job.locationsText.split(",")[0].trim();
 
-        jobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          country: "Romania",
-          city: city,
-        });
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(city.toLowerCase())
+        );
+
+        if (foudedTown && county) {
+          jobs.push({
+            job_title: job_title,
+            job_link: job_link,
+            company: company.company,
+            country: "Romania",
+            city: foudedTown,
+            county: county,
+          });
+        } else {
+          jobs.push({
+            job_title: job_title,
+            job_link: job_link,
+            company: company.company,
+            country: "Romania",
+            remote: ["Remote"],
+          });
+        }
       });
     })
     .then(() => {

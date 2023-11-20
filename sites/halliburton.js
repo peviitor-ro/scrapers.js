@@ -1,75 +1,95 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
-const url =
-  "https://jobs.halliburton.com/search/?createNewAlert=false&q=&locationsearch=Romania";
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
 
-const company = { company: "Halliburton" };
-let finalJobs = [];
+const generateJob = (job_title, job_link, country, city, county, remote) => ({
+  job_title,
+  job_link,
+  country,
+  city,
+  county,
+  remote,
+});
 
-const s = new scraper.Scraper(url);
+const getJobs = async () => {
+  let url =
+    "https://jobs.halliburton.com/search/?createNewAlert=false&q=&locationsearch=Romania";
+  const jobs = [];
+  const scraper = new Scraper(url);
 
-s.soup.then((soup) => {
-  let totalJobs = parseInt(
-    soup.find("span", { class: "paginationLabel" }).findAll("b")[1].text
+  let res = await scraper.get_soup("HTML");
+  let pages = Math.ceil(
+    parseInt(
+      res.find("span", { class: "paginationLabel" }).findAll("b")[1].text
+    ) / 25
   );
-  let pages = scraper.range(0, totalJobs, 25);
+  let items = res.find("tbody").findAll("tr");
+  let isJobs = res.find("div", { id: "attention" });
 
-  const fetchData = () => {
-    return new Promise((resolve, reject) => {
-      let jobs = [];
-      pages.forEach((page) => {
-        const url = `https://jobs.halliburton.com/search/?createNewAlert=false&q=&locationsearch=Romania&startrow=${page}`;
-        const s = new scraper.Scraper(url);
+  if (isJobs) {
+    return [];
+  }
 
-        s.soup.then((soup) => {
-          const results = soup.find("tbody").findAll("tr");
-          results.forEach((job) => {
-            jobs.push(job);
-          });
-          if (jobs.length === totalJobs) {
-            resolve(jobs);
-          }
-        });
-      });
-    });
-  };
+  for (let i = 0; i < pages; i++) {
+    items.forEach((item) => {
+      const isRo = item
+        .find("span", { class: "jobLocation" })
+        .text.split(",")[2]
+        .trim();
 
-  fetchData()
-    .then((jobs) => {
-      jobs.forEach((job) => {
-        const id = uuid.v4();
-        const job_title = job.find("a").text.trim();
+      if (isRo.toLowerCase() === "ro") {
+        const job_title = item.find("a").text.trim();
         const job_link =
-          "https://jobs.halliburton.com" + job.find("a").attrs.href;
-        const city = job
+          "https://jobs.halliburton.com" + item.find("a").attrs.href;
+
+        let city = item
           .find("span", { class: "jobLocation" })
           .text.split(",")[0]
           .trim();
+        if (city.includes("Bucharest")) {
+          city = "Bucuresti";
+        }
+        const { foudedTown, county } = getTownAndCounty(city);
+        const remote = [];
 
-        finalJobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          city: city,
-          country: "Romania",
-        });
-      });
-    })
-    .then(() => {
-      console.log(JSON.stringify(finalJobs, null, 2));
-
-      scraper.postApiPeViitor(finalJobs, company);
-
-      let logo =
-        "https://rmkcdn.successfactors.com/6fdd2711/8ba9d1d9-30b6-4c01-b093-b.svg";
-
-      let postLogo = new scraper.ApiScraper(
-        "https://api.peviitor.ro/v1/logo/add/"
-      );
-      postLogo.headers.headers["Content-Type"] = "application/json";
-      postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
+        jobs.push(
+          generateJob(
+            job_title,
+            job_link,
+            "Romania",
+            foudedTown,
+            county,
+            remote
+          )
+        );
+      }
     });
-});
+  }
+
+  return jobs;
+};
+
+const getParams = () => {
+  const company = "Halliburton";
+  const logo =
+    "https://rmkcdn.successfactors.com/6fdd2711/8ba9d1d9-30b6-4c01-b093-b.svg";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+    run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

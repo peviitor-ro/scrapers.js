@@ -1,31 +1,27 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
-const url =
-  "https://api.smartrecruiters.com/v1/companies/metgroup/postings?limit=100&country=ro";
+const url = "https://www.p-a.ro/cariere/";
 
-const company = { company: "METGroup" };
+const company = { company: "PoppAsociatii" };
 let finalJobs = [];
 
-const s = new scraper.ApiScraper(url);
+const s = new scraper.Scraper(url);
 
-s.get()
-  .then((response) => {
-    const jobs = response.content;
+s.soup
+  .then((soup) => {
+    const jobs = soup.findAll("div", { class: "post-wrap" });
 
     jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.name;
-      const job_link = "https://jobs.smartrecruiters.com/METGroup/" + job.id;
-      const city = job.location.city;
+      const job_title = job.find("a").text.trim();
+      const job_link = job.find("a").attrs.href;
 
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: city,
+        city: "Bucuresti",
+        county: "Bucuresti",
         country: "Romania",
       });
     });
@@ -35,7 +31,7 @@ s.get()
 
     scraper.postApiPeViitor(finalJobs, company);
 
-    let logo = "https://group.met.com/media/3f4d1h1o/met-logo.svg";
+    let logo = "https://www.p-a.ro/wp-content/themes/pa/images/logo.png";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"

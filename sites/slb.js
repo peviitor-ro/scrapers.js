@@ -1,32 +1,33 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city, replace_char } = require("../utils.js");
 
-const url = "https://careers.slb.com/job-listing";
+const generateJob = (job_title, job_link, city, county, remote) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+  remote,
+});
 
-const company = { company: "SLB" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url = "https://careers.slb.com/job-listing";
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("HTML");
 
-const s = new scraper.Scraper(url);
+  const jobs = [];
 
-s.soup
-  .then((response) => {
-    let jobs = [];
+  try {
+    const jobs_objects = res
+      .find("table", { id: "jobsTable" })
+      .find("tbody")
+      .findAll("tr");
 
-    try {
-      jobs = response
-        .find("table", { id: "jobsTable" })
-        .find("tbody")
-        .findAll("tr");
-    } catch (error) {
-      console.log({ succes: "no jobs found" });
-    }
-
-    jobs.forEach((job) => {
+    jobs_objects.forEach((job) => {
       const country = job.findAll("td")[3].text.trim();
 
       if (country == "Romania") {
-        const id = uuid.v4();
         const job_title = job.find("a").text.trim();
         let link = job.find("a").attrs.href;
         let job_link = "";
@@ -38,28 +39,40 @@ s.soup
         }
 
         const city = job.findAll("td")[2].text.trim();
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(replace_char(city.toLowerCase(), ["-"], " "))
+        );
 
-        finalJobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          city: city,
-          country: country,
-          company: company.company,
-        });
+        if (job_title) {
+          jobs.push(generateJob(job_title, job_link, foudedTown, county, []));
+        }
       }
     });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
+  } catch (error) {}
 
-    scraper.postApiPeViitor(finalJobs, company);
+  return jobs;
+};
 
-    let logo = "https://www.slb.com/-/media/images/logo/slb_logo_rgb_svg.ashx";
+const getParams = () => {
+  const company = "SLB";
+  const logo = "https://www.slb.com/-/media/images/logo/slb_logo_rgb_svg.ashx";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
 
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

@@ -1,6 +1,5 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city } = require("../utils.js");
 
 const generateJob = (job_title, job_link, city, county) => ({
   job_title,
@@ -16,9 +15,12 @@ const getAditionalCity = async (url) => {
 
   const citys = res.jobPostingInfo.additionalLocations;
   for (let i = 0; i < citys.length; i++) {
-    const city = citys[i].split(",")[0];
+    let city = citys[i];
+    if (city === "Bucharest") {
+      city = "Bucuresti";
+    }
 
-    const { foudedTown, county } = getTownAndCounty(translate_city(city));
+    const { foudedTown, county } = getTownAndCounty(city);
 
     if (foudedTown && county) {
       return { foudedTown, county };
@@ -27,66 +29,66 @@ const getAditionalCity = async (url) => {
 };
 
 const getJobs = async () => {
-  const url =
-    "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers/jobs";
+  const url = "https://nxp.wd3.myworkdayjobs.com/wday/cxs/nxp/careers/jobs";
   const scraper = new Scraper(url);
-
   const additionalHeaders = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-
   scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
-
   const limit = 20;
   const data = {
-    appliedFacets: {},
+    appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
     limit: 20,
     offset: 0,
-    searchText: "Romania",
+    searchText: "",
   };
-
   let soup = await scraper.post(data);
-
   const { total } = soup;
-
-  const numberOfPages = Math.ceil(total / limit);
-
+  const numberOfPages = Math.floor(
+    total % limit === 0 ? total / limit : total / limit + 1
+  );
   const jobs = [];
-
   for (let i = 0; i < numberOfPages; i += 1) {
+    data.offset = i * limit;
+    soup = await scraper.post(data);
     const { jobPostings } = soup;
     jobPostings.forEach(async (jobPosting) => {
       const { title, externalPath, locationsText } = jobPosting;
-      const job_link_prefix =
-        "https://plexus.wd5.myworkdayjobs.com/en-US/Plexus_Careers";
+      const job_link_prefix = "https://nxp.wd3.myworkdayjobs.com/en-US/careers";
       const job_link = job_link_prefix + externalPath;
-      const { foudedTown, county } = getTownAndCounty(
-        translate_city(locationsText.split(",")[0])
-      );
+      const separatorIndex = locationsText.indexOf(",");
+      let city = locationsText.substring(separatorIndex + 1);
 
-      if (foudedTown && county) {
-        jobs.push(generateJob(title, job_link, foudedTown, county));
-      } else {
-        const { foudedTown, county } = await getAditionalCity(
-          "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers" +
-            externalPath
-        );
-        jobs.push(generateJob(title, job_link, foudedTown, county));
+      if (city === "Bucharest") {
+        city = "Bucuresti";
       }
-    });
 
-    data.offset = (i + 1) * limit;
-    soup = await scraper.post(data);
+      let { foudedTown, county } = getTownAndCounty(city);
+
+      const isCounty = async () => {
+        if (county && foudedTown) {
+          return { foudedTown, county };
+        } else {
+          const jobName = externalPath.split("/")[3];
+          const url = `https://nxp.wd3.myworkdayjobs.com/wday/cxs/nxp/careers/job/${jobName}`;
+          return await getAditionalCity(url);
+        }
+      };
+
+      isCounty().then((obj) => {
+        const job = generateJob(title, job_link, obj.foudedTown, obj.county);
+        jobs.push(job);
+      });
+    });
   }
 
   return jobs;
 };
 
 const getParams = () => {
-  const company = "Plexus";
-  const logo =
-    "https://www.plexus.com/PlexusCDN/plexus/media/english-media/logos/Plexus-Logo-212x42.svg";
+  const company = "NXP";
+  const logo = "https://nxp.wd3.myworkdayjobs.com/careers/assets/logo";
   const apikey = process.env.APIKEY;
   const params = {
     company,

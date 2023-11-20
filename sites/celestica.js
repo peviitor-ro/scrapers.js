@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
   "https://careers.celestica.com/search/?createNewAlert=false&q=&locationsearch=Romania&startrow=10";
@@ -17,7 +18,7 @@ s.soup.then((soup) => {
   let pages = scraper.range(0, totalJobs, 25);
 
   const fetchData = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let jobs = [];
       pages.forEach((page) => {
         const url = `https://careers.celestica.com/search/?createNewAlert=false&q=&locationsearch=Romania&startrow=${page}`;
@@ -39,24 +40,29 @@ s.soup.then((soup) => {
   fetchData()
     .then((jobs) => {
       jobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.find("a").text.trim();
         const job_link =
           "https://careers.celestica.com" + job.find("a").attrs.href;
-        const city = job.find("span", { class: "jobLocation" }).text.trim();
+        const city = job
+          .find("span", { class: "jobLocation" })
+          .text.split(",")[0]
+          .trim();
+
+        const { foudedTown, county } = getTownAndCounty(translate_city(city));
 
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
           company: company.company,
-          city: city,
+          city: foudedTown,
+          county: county,
           country: "Romania",
         });
       });
     })
     .then(() => {
       console.log(JSON.stringify(finalJobs, null, 2));
+      console.log(finalJobs.length);
 
       scraper.postApiPeViitor(finalJobs, company);
 

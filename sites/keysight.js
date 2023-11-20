@@ -1,7 +1,8 @@
 "use strict";
 // TODO: paginations
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 let url = "https://jobs.keysight.com/go/Keysight-in-Romania/8005200/";
 
@@ -18,7 +19,6 @@ s.soup
       .findAll("tr");
 
     jobs.forEach((job) => {
-      const id = uuid.v4();
       const job_title = job.find("a").text.trim();
       const job_link = "https://jobs.keysight.com" + job.find("a").attrs.href;
       const city = job
@@ -26,14 +26,20 @@ s.soup
         .text.split(",")[0]
         .trim();
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        country: "Romania",
-        city: city,
-        company: company.company,
-      });
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(city.toLowerCase())
+      );
+
+      if (foudedTown && county) {
+        finalJobs.push({
+          job_title: job_title,
+          job_link: job_link,
+          country: "Romania",
+          city: foudedTown,
+          county: county,
+          company: company.company,
+        });
+      }
     });
   })
   .then(() => {

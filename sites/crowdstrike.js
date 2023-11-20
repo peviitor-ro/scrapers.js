@@ -1,81 +1,138 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs";
+const generateJob = (job_title, job_link, city, county, remote) => ({
+  job_title,
+  job_link,
+  country: "Romania",
+  city,
+  county,
+  remote,
+});
 
-const company = { company: "CrowdStrike" };
-let finalJobs = [];
+const getAditionalCity = async (url) => {
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("JSON");
 
-const s = new scraper.ApiScraper(url);
-s.headers.headers["Content-Type"] = "application/json";
-s.headers.headers["Accept"] = "application/json";
+  const citys = res.jobPostingInfo.additionalLocations;
+  const is_remote = res.jobPostingInfo.location.split("-");
+  const remote =
+    is_remote[is_remote.length - 1].trim().toLowerCase() === "remote"
+      ? ["Remote"]
+      : [];
 
-let data = {
-  appliedFacets: { locations: ["27086a67c26901049dcca1f33f01ac08"] },
-  limit: 20,
-  offset: 0,
-  searchText: "",
+  if (citys) {
+    for (let i = 0; i < citys.length; i++) {
+      const splits = citys[i].split("-");
+      let city = translate_city(splits[splits.length - 1].trim().toLowerCase());
+      let finded_city = "";
+      let finded_county = "";
+
+      if (city.trim().toLowerCase() === "remote") {
+        finded_county = "";
+        finded_city = "Romania";
+      } else {
+        const { foudedTown, county } = getTownAndCounty(city);
+        if (county) {
+          finded_county = county;
+          finded_city = foudedTown;
+        }
+      }
+      return { foudedTown: finded_city, county: finded_county, remote };
+    }
+  } else {
+    return { foudedTown: "", county: "", remote };
+  }
 };
 
-s.post(data).then((response) => {
-  let step = 20;
-  let totalJobs = response.total;
-
-  const range = scraper.range(0, totalJobs, step);
-
-  const fetchData = () => {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < range.length; i++) {
-        data["offset"] = range[i];
-        s.post(data).then((response) => {
-          let jobs = response.jobPostings;
-          jobs.forEach((job) => {
-            finalJobs.push(job);
-          });
-          if (finalJobs.length === totalJobs) {
-            resolve(finalJobs);
-          }
-        });
-      }
-    });
+const getJobs = async () => {
+  const url =
+    "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs";
+  const scraper = new Scraper(url);
+  const additionalHeaders = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
+  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
+  const limit = 20;
+  let data = {
+    appliedFacets: { locations: ["27086a67c26901049dcca1f33f01ac08"] },
+    limit: 20,
+    offset: 0,
+    searchText: "",
+  };
+  let soup = await scraper.post(data);
+  const { total } = soup;
+  const numberOfPages = Math.floor(
+    total % limit === 0 ? total / limit : total / limit + 1
+  );
+  const jobs = [];
+  for (let i = 0; i < numberOfPages; i++) {
+    data.offset = i * limit;
+    soup = await scraper.post(data);
+    const { jobPostings } = soup;
 
-  let jobs = [];
+    await Promise.all(
+      jobPostings.map(async (jobPosting) => {
+        const { title, externalPath, locationsText } = jobPosting;
+        const job_link_prefix =
+          "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
+        const job_link = job_link_prefix + externalPath;
+        const separatorIndex = locationsText.indexOf(" ");
+        let city = translate_city(locationsText.substring(0, separatorIndex));
 
-  fetchData()
-    .then((finalJobs) => {
-      finalJobs.forEach((job) => {
-        const id = uuid.v4();
-        const job_title = job.title;
-        const job_link =
-          "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers" +
-          job.externalPath;
-        const city = job.locationsText.split(",")[0];
+        let { foudedTown, county } = getTownAndCounty(city);
 
-        jobs.push({
-          id: id,
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          country: "Romania",
-          city: city,
-        });
-      });
-    })
-    .then(() => {
-      console.log(JSON.stringify(jobs, null, 2));
+        const isCounty = async () => {
+          if (county) {
+            const res = {
+              foudedTown,
+              county,
+              remote: [],
+            };
+            return res;
+          } else {
+            const jobName = externalPath.split("/");
+            const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
+              jobName[jobName.length - 1]
+            }`;
+            return await getAditionalCity(url);
+          }
+        };
 
-      scraper.postApiPeViitor(jobs, company);
+        const res = await isCounty();
 
-      let logo =
-        "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
+        jobs.push(
+          generateJob(title, job_link, res.foudedTown, res.county, res.remote)
+        );
+      })
+    );
+  }
+  return jobs;
+};
 
-      let postLogo = new scraper.ApiScraper(
-        "https://api.peviitor.ro/v1/logo/add/"
-      );
-      postLogo.headers.headers["Content-Type"] = "application/json";
-      postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-    });
-});
+const getParams = () => {
+  const company = "CrowdStrike";
+  const logo =
+    "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
+  const apikey = process.env.APIKEY;
+  const params = {
+    company,
+    logo,
+    apikey,
+  };
+  return params;
+};
+
+const run = async () => {
+  const jobs = await getJobs();
+  const params = getParams();
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job

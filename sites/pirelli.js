@@ -1,10 +1,13 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, city) => ({
+const generateJob = (job_title, job_link, city, county) => ({
   job_title,
   job_link,
   country: "Romania",
   city, 
+  county,
 });
 
 const getJobs = async () => {
@@ -16,10 +19,20 @@ const getJobs = async () => {
   const jobs = [];
   jobElements.forEach((el) => {
     const job_title = el.find('span').text.trim();
-    const city = el.find('span', { 'class': "loc" }).text.trim();
+    const city = el.find('span', { 'class': "loc" }).text.split(',')[0].trim();
     const jumpTo = "#:~:text="; 
     const job_link = url + jumpTo + job_title;
-    const job = generateJob(job_title, job_link, city);
+
+    let { foudedTown, county } = getTownAndCounty(
+      translate_city(city.toLowerCase())
+    );
+
+    if (foudedTown === "Slatina" && county === "Arges") {
+      foudedTown = "Slatina";
+      county = "Olt";
+    }
+
+    const job = generateJob(job_title, job_link, foudedTown, county);
     jobs.push(job);
   });
   return jobs;
@@ -29,7 +42,7 @@ const getParams = () => {
   const company = "Pirelli";
   const logo =
     "https://d2snyq93qb0udd.cloudfront.net/corporate/logo-pirelli2x.jpg";
-  const apikey = process.env.KNOX;
+  const apikey = "process.env.KNOX";
   const params = {
     company,
     logo,
