@@ -21,16 +21,15 @@ const getJobs = async () => {
   items.forEach((item) => {
     const job_title = item.title;
     const job_link = "https://www.henkel.ro" + item.link;
-    let city = item.location.split(",")[1].trim();
+    let city = translate_city(item.location.split(",")[1].trim().toLowerCase());
 
     const { foudedTown, county } = getTownAndCounty(
-      translate_city(city.toLowerCase())
+      city
     );
 
     const job = generateJob(job_title, job_link, foudedTown, county);
     jobs.push(job);
   });
-
   return jobs;
 }
 
@@ -49,6 +48,7 @@ const getParams = () => {
 
 const run = async () => {
   const jobs = await getJobs();
+  console.log(jobs);
   const params = getParams();
   postApiPeViitor(jobs, params);
 };
