@@ -62,16 +62,20 @@ const translate_city = (city) => {
    * @returns {String} city
    */
 
+  city = city.replace(" ", "_");
+
   // Populate this object with the cities that need translation
   const cities = {
     bucharest: "Bucuresti",
     cluj: "Cluj-Napoca",
+    targu_mures: "Targu-Mures",
+    bucuresti_ilfov: "Bucuresti",
   };
 
   if (cities[city.toLowerCase()]) {
-    return cities[city];
+    return cities[city.toLowerCase()];
   } else {
-    return city;
+    return city.replace("_", " ");
   }
 };
 
