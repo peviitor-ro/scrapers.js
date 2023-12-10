@@ -8,8 +8,9 @@ const url = "https://www.fildas.ro/cariere/";
 const company = { company: "fildas" };
 let finalJobs = [];
 const SUFFIX = "#:~:text=";
-const apiKey = process.env.KNOX
-const s = new scraper.Scraper(url);
+const apiKey = process.env.KNOX;
+const no_ssl = true;
+const s = new scraper.Scraper(url, no_ssl);
 
 s.soup
   .then((soup) => {
@@ -17,7 +18,7 @@ s.soup
     jobs.forEach((job) => {
       const job_title = job.text.trim().split("&#8211;")[0];
       const job_link = url + SUFFIX + job_title;
-      const locations = job.text.trim().split("&#8211;")[1].split(",")
+      const locations = job.text.trim().split("&#8211;")[1].split(",");
       const citys = [];
       const countys = [];
 
