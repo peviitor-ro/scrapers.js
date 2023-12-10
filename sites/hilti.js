@@ -9,6 +9,7 @@ const url =
 const company = { company: "Hilti" };
 let finalJobs = [];
 
+
 const s = new scraper.Scraper(url);
 
 s.soup
@@ -18,17 +19,13 @@ s.soup
     jobs.forEach((job) => {
       const job_title = job.find("a").text.trim();
       const job_link = "https://careers.hilti.group" + job.find("a").attrs.href;
-      let city = job
+      let city = translate_city(job
         .find("li", { class: "list-inline-item" })
         .text.split(",")[0]
-        .trim();
-        
-      if (city === "Bucuresti Ilfov"){
-        city = "Bucuresti";
-      }
-
+        .trim());
+      
       const { foudedTown, county } = getTownAndCounty(
-        translate_city(city.toLowerCase())
+        city
       );
 
       finalJobs.push({
