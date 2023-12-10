@@ -59,7 +59,7 @@ s.soup
     scraper.postApiPeViitor(finalJobs, company, process.env.APIKEY);
 
     let logo =
-      "https://www.magurelesciencepark.ro/wp-content/uploads/2021/01/logo-Qualitance.jpg";
+      "https://tech.qualitance.com/hubfs/logo_new_whitebg-01.png";
 
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"
