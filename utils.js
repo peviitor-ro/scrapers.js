@@ -70,6 +70,7 @@ const translate_city = (city) => {
     cluj: "Cluj-Napoca",
     targu_mures: "Targu-Mures",
     bucuresti_ilfov: "Bucuresti",
+    tg_mures: "Targu-Mures",
   };
 
   if (cities[city.toLowerCase()]) {
