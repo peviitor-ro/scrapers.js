@@ -12,10 +12,10 @@ const generateJob = (job_title, job_link, country, county, city) => ({
 });
 
 const get_headers = async () => {
-  url = "https://www.maersk.com/careers/vacancies/assets/3508041.js";
+  const url = "https://www.maersk.com/careers/vacancies/assets/0bab2e7.js";
   const scraper = new Scraper(url);
   const soup = await scraper.get_soup("HTML");
-  const pattern = /var r={headers:{"Consumer-Key":"(.*?)"}/;
+  const pattern = /var e="(.*)";return/;
   const match = soup.text.match(pattern);
   return { "Consumer-Key": match[1] };
 };
