@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { translate_city } = require("../utils.js");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
 
 const url =
   "https://careers.finastra.com/api/jobs?location=Romania&woe=12&stretchUnit=MILES&stretch=100&sortBy=relevance&descending=false&internal=false";
@@ -25,17 +26,28 @@ s.get().then((response) => {
           let jobs = response.jobs;
 
           jobs.forEach((job) => {
-            const id = uuid.v4();
             const job_title = job.data.title;
             const job_link = `https://careers.finastra.com/jobs/${job.data.slug}?lang=en-us`;
-            const city = job.data.city;
+            const locations = job.data.full_location.split(";");
+            const cities = [];
+            const counties = [];
+
+            locations.forEach((location) => {
+              const city = translate_city(location.split(",")[0].trim());
+              const { foudedTown, county } = getTownAndCounty(city);
+
+              if (foudedTown && county && !cities.includes(foudedTown)) {
+                cities.push(foudedTown);
+                counties.push(county);
+              }
+            });
 
             finalJobs.push({
-              id: id,
               job_title: job_title,
               job_link: job_link,
               company: company.company,
-              city: city,
+              city: cities,
+              county: counties,
               country: "Romania",
             });
           });
