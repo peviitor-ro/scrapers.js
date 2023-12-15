@@ -59,8 +59,6 @@ s.soup
         });
       }
 
-      console.log(cities, counties, remote);
-
       finalJobs.push({
         job_title: job_title,
         job_link: job_link,
