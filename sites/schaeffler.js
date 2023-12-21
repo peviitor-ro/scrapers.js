@@ -24,8 +24,12 @@ async function get_aditonal_city(url) {
     }
   });
 
-  return { foundedTown: cities, county: counties };
+  return { foudedTown: cities, county: counties };
 }
+
+get_aditonal_city(
+  "https://jobs.schaeffler.com/job/Herzogenaurach-Quality-Management-Professional-Audit-91074/999147901/"
+);
 
 const url =
   "https://jobs.schaeffler.com/search/?createNewAlert=false&q=&locationsearch=Romania&optionsFacetsDD_country=&optionsFacetsDD_customfield1=&optionsFacetsDD_shifttype=&optionsFacetsDD_lang=&optionsFacetsDD_customfield2=&optionsFacetsDD_customfield4=";
