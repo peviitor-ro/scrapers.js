@@ -84,7 +84,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Pentalog";
   const logo =
-    "https://upload.wikimedia.org/wikipedia/commons/f/fc/Logo_pentalog.png";
+    "https://private-user-images.githubusercontent.com/116546445/289375396-ca49d044-bb58-43e5-b0fc-bf512b8dd5da.JPG?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTEiLCJleHAiOjE3MDMxNzM4ODgsIm5iZiI6MTcwMzE3MzU4OCwicGF0aCI6Ii8xMTY1NDY0NDUvMjg5Mzc1Mzk2LWNhNDlkMDQ0LWJiNTgtNDNlNS1iMGZjLWJmNTEyYjhkZDVkYS5KUEc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBSVdOSllBWDRDU1ZFSDUzQSUyRjIwMjMxMjIxJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDIzMTIyMVQxNTQ2MjhaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1iY2M4YTA1MWMzNGE3MTI0YjE4YWUzMzk0YzMxOWQyODkzMGEyY2Y5ZGNmOTVkNTkyMWNkYjkyNWM0Y2RlNWRhJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZhY3Rvcl9pZD0wJmtleV9pZD0wJnJlcG9faWQ9MCJ9.lFioRwvs35chmvGanfRSVBktk5b2oEELqPPurrUYPrk";
   const apikey = process.env.APIKEY;
   const params = {
     company,
