@@ -55,7 +55,7 @@ const getJobs = async () => {
 
 const getParams = () => {
   const company = "SLB";
-  const logo = "https://www.slb.com/-/media/images/logo/slb_logo_rgb_svg.ashx";
+  const logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/SLB_Logo_2022.svg/1024px-SLB_Logo_2022.svg.png";
   const apikey = process.env.APIKEY;
   const params = {
     company,
