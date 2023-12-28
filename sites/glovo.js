@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url = "https://boards-api.greenhouse.io/v1/boards/glovo/jobs";
 
@@ -16,16 +17,16 @@ s.get()
     jobs.forEach((job) => {
       const country = job.location.name;
       if (country.includes("Romania")) {
-        const id = uuid.v4();
         const job_title = job.title;
         const job_link = job.absolute_url;
-        const city = job.location.name.split(",")[0];
+        const city = translate_city(job.location.name.split(",")[0]);
+        const { foudedTown, county } = getTownAndCounty(city);
 
         finalJobs.push({
-          id: id,
           job_title: job_title,
           job_link: job_link,
-          city: city,
+          city: foudedTown,
+          county: county,
           country: "Romania",
           company: company.company,
         });

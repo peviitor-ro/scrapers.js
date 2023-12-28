@@ -30,6 +30,7 @@ const getJobs = async () => {
     const job = generateJob(job_title, job_link, foudedTown, county);
     jobs.push(job);
   });
+
   return jobs;
 }
 
@@ -48,7 +49,6 @@ const getParams = () => {
 
 const run = async () => {
   const jobs = await getJobs();
-  console.log(jobs);
   const params = getParams();
   postApiPeViitor(jobs, params);
 };
