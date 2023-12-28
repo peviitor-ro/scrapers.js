@@ -58,10 +58,11 @@ const getJobs = async () => {
   let soup = await scraper.post(data);
   const { total } = soup;
   const numberOfPages = Math.floor(
-    total % limit === 0 ? total / limit : total / limit + 1
+    total / limit + (total % limit === 0 ? 0 : 1)
   );
+
   const jobs = [];
-  for (let i = 0; i < numberOfPages; i += 1) {
+  for (let i = 0; i < numberOfPages; i ++ ) {
     const { jobPostings } = soup;
     await Promise.all(
       jobPostings.map(async (jobPosting) => {
@@ -87,7 +88,7 @@ const getJobs = async () => {
       })
     );
 
-    data.offset = i * limit;
+    data.offset = i + 1 * limit;
     soup = await scraper.post(data);
   }
   return jobs;
