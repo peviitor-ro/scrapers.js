@@ -43,32 +43,34 @@ const getJobs = async () => {
       .find("tbody")
       .findAll("tr");
 
-    jobsElements.forEach((job) => {
-      const job_title = job.find("a").text;
-      const job_link = "https://careers.ey.com" + job.find("a").attrs.href;
-      const { foudedTown, county } = getTownAndCounty(
-        translate_city(
-          job
-            .find("span", { class: "jobLocation" })
-            .text.split(",")[0]
-            .toLowerCase()
-            .trim()
-        )
-      );
-      const job_type = async () => await get_job_type(job_link);
+    await Promise.all(
+      jobsElements.map(async (job) => {
+        const job_title = job.find("a").text;
+        const job_link = "https://careers.ey.com" + job.find("a").attrs.href;
+        const { foudedTown, county } = getTownAndCounty(
+          translate_city(
+            job
+              .find("span", { class: "jobLocation" })
+              .text.split(",")[0]
+              .toLowerCase()
+              .trim()
+          )
+        );
+        const job_type = await get_job_type(job_link);
 
-      job_type().then((res) => {
         if (foudedTown && county) {
-          jobs.push(generateJob(job_title, job_link, foudedTown, county, res));
+          jobs.push(
+            generateJob(job_title, job_link, foudedTown, county, job_type)
+          );
         } else {
           let city = job
             .find("span", { class: "jobLocation" })
             .text.split(",")[0]
             .trim();
-          jobs.push(generateJob(job_title, job_link, city, "", res));
+          jobs.push(generateJob(job_title, job_link, city, "", job_type));
         }
-      });
-    });
+      })
+    );
 
     url = "https://careers.ey.com/ey/search/?q=Romania&startrow=" + rows[i + 1];
     scraper.url = url;
@@ -92,9 +94,7 @@ const getParams = () => {
 };
 
 const run = async () => {
-  const jobs = await getJobs().then((res) => {
-    return res;
-  });
+  const jobs = await getJobs();
 
   const params = getParams();
   postApiPeViitor(jobs, params);
