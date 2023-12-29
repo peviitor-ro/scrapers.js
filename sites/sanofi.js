@@ -49,33 +49,35 @@ const getJobs = async () => {
 
   const jobsElements = soup.findAll("ul")[1].findAll("li");
 
-  jobsElements.forEach(async (job) => {
-    const job_title = job.find("h2").text.trim();
-    const job_link = "https://en.jobs.sanofi.com" + job.find("a").attrs.href;
-    const city = job
-      .find("span", { class: "job-location" })
-      .text.split(",")[0]
-      .trim();
+  await Promise.all(
+    jobsElements.map(async (job) => {
+      const job_title = job.find("h2").text.trim();
+      const job_link = "https://en.jobs.sanofi.com" + job.find("a").attrs.href;
+      const city = job
+        .find("span", { class: "job-location" })
+        .text.split(",")[0]
+        .trim();
 
-    const { foudedTown, county } = getTownAndCounty(
-      translate_city(city.toLowerCase())
-    );
-
-    const isCounty = async () => {
-      if (foudedTown && county) {
-        return { foudedTown, county };
-      } else {
-        return await getAditionalCity(job_link);
-      }
-    };
-
-    await isCounty().then((res) => {
-      const { foudedTown, county } = res;
-      jobs.push(
-        generateJob(job_title, job_link, "Romania", county, foudedTown)
+      const { foudedTown, county } = getTownAndCounty(
+        translate_city(city.toLowerCase())
       );
-    });
-  });
+
+      const isCounty = async () => {
+        if (foudedTown && county) {
+          return { foudedTown, county };
+        } else {
+          return await getAditionalCity(job_link);
+        }
+      };
+
+      await isCounty().then((res) => {
+        const { foudedTown, county } = res;
+        jobs.push(
+          generateJob(job_title, job_link, "Romania", county, foudedTown)
+        );
+      });
+    })
+  );
 
   return jobs;
 };
@@ -94,9 +96,7 @@ const getParams = () => {
 };
 
 const run = async () => {
-  const jobs = await getJobs().then((res) => {
-    return res;
-  });
+  const jobs = await getJobs();
 
   const params = getParams();
   postApiPeViitor(jobs, params);
