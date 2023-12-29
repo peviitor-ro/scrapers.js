@@ -36,25 +36,26 @@ async function data() {
   jobs.forEach((job) => {
     const job_title = job.name;
     const job_link = job.url;
-    let city = ["Bucuresti", "Brasov", "Sibiu"];
-    let countys = ["Bucuresti", "Brasov", "Sibiu"];
+
+    const job_element = {
+      job_title: job_title,
+      job_link: job_link,
+      company: company.company,
+      country: "Romania",
+    };
 
     if (job.location != null && job.location.name != "") {
       const { foudedTown, county } = getTownAndCounty(
         translate_city(job.location.name.toLowerCase())
       );
 
-      city = foudedTown;
-      countys = county;
+      job_element.city = foudedTown;
+      job_element.county = county;
+    } else {
+      job_element.remote = "Remote";
     }
 
-    finalJobs.push({
-      job_title: job_title,
-      job_link: job_link,
-      company: company.company,
-      city: city,
-      country: "Romania",
-    });
+    finalJobs.push(job_element);
   });
 
   console.log(JSON.stringify(finalJobs, null, 2));
