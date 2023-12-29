@@ -1,9 +1,10 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const url =
-  "https://leoni.taleo.net/careersection/rest/jobboard/searchjobs?lang=ro&portal=101430233";
+  "https://leoni.taleo.net/careersection/rest/jobboard/searchjobs?lang=en&portal=101430233";
 let data = {
   multilineEnabled: false,
   sortingSelection: {
@@ -11,13 +12,13 @@ let data = {
     ascendingSortingOrder: "false",
   },
   fieldData: {
-    fields: { KEYWORD: "", LOCATION: "627270431240", CATEGORY: "" },
+    fields: { KEYWORD: "", LOCATION: "", CATEGORY: "" },
     valid: true,
   },
   filterSelectionParam: {
     searchFilterSelections: [
       { id: "POSTING_DATE", selectedValues: [] },
-      { id: "LOCATION", selectedValues: [] },
+      { id: "LOCATION", selectedValues: ["627270431240"] },
       { id: "JOB_FIELD", selectedValues: [] },
       { id: "JOB_TYPE", selectedValues: [] },
       { id: "JOB_SCHEDULE", selectedValues: [] },
@@ -48,6 +49,7 @@ s.headers.headers["tz"] = "GMT+03:00";
 
 s.post(data).then((res) => {
   const totalJobs = parseInt(res.pagingData.totalCount);
+
   let step = 25;
 
   let pages = scraper.range(0, totalJobs, step);
@@ -61,9 +63,9 @@ s.post(data).then((res) => {
           jobs.forEach((job) => {
             const job_title = job.column[0].trim();
             const job_link = `https://leoni.taleo.net/careersection/ro_romania/jobdetail.ftl?job=${job.contestNo}&tz=GMT%2B03%3A00&tzname=Europe%2FBucharest`;
-            const city = job.column[2]
-              .replace(/[\["(.*)"\]]/g, "")
-              .split("-")[2];
+            const city = translate_city(
+              job.column[2].replace(/[\["(.*)"\]]/g, "").split("-")[2]
+            );
 
             const { foudedTown, county } = getTownAndCounty(city);
 
