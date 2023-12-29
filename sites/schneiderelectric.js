@@ -29,6 +29,7 @@ s.get().then((response) => {
             const job = elem.data;
 
             const locations = job.full_location.split(";");
+            const remote = job.multipleLocations ? "Remote" : [];
 
             locations.forEach((location) => {
               const city = location.split(",")[0];
@@ -43,6 +44,7 @@ s.get().then((response) => {
                   company: company.company,
                   city: foudedTown,
                   county: county,
+                  remote: remote,
                   country: "Romania",
                 });
               } else if (city === "Romania") {
@@ -52,6 +54,7 @@ s.get().then((response) => {
                   company: company.company,
                   city: "Bucuresti",
                   county: "Bucuresti",
+                  remote: remote,
                   country: "Romania",
                 });
               }
