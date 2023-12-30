@@ -1,12 +1,12 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 const obj = {
   url: "https://www.delonghigroup.com/en/views/ajax?_wrapper_format=drupal_ajax",
   params: {
     "MIME Type": "application/x-www-form-urlencoded; charset=UTF-8",
-    field_job_country_target_id: 115,
     view_name: "jobs_positions",
     view_display_id: "block_1",
     view_path: "/node/62",
@@ -39,25 +39,33 @@ const fetchData = async () => {
       const job_location = job.find("div", {
         class: "job-country-location",
       }).text;
-      let city_element = job_location.split(",")[1].trim();
-      const job_country = job_location.split(",")[0].trim();
+      let city_element = translate_city(job_location.split(",")[1].trim());
+      const job_country = job_location.split(","); //[0].split(" ")[0].trim();
 
-      if (city_element.toLowerCase() === "cluj") {
-        city_element = "Cluj-Napoca";
-      } else if (city_element.toLowerCase() === "bucharest") {
-        city_element = "Bucuresti";
+      let country;
+      if (job_country[0] === "CEE") {
+        country = job_country[2].trim();
+      } else {
+        country = job_country[0].split(" ")[0].trim();
       }
 
-      const { foudedTown, county } = getTownAndCounty(city_element);
-
-      jobs.push({
+      const job_element = {
         job_title: job_title,
         job_link: job_link,
         company: company.company,
-        city: foudedTown,
-        country: job_country,
-        county: county,
-      });
+        country: country,
+      };
+
+      if (country === "Romania") {
+        const { foudedTown, county } = getTownAndCounty(city_element);
+
+        job_element["city"] = foudedTown;
+        job_element["county"] = county;
+      } else {
+        job_element["city"] = city_element;
+      }
+
+      jobs.push(job_element);
     });
   });
   return jobs;
