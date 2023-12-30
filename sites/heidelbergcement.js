@@ -30,10 +30,6 @@ async function get_aditonal_city(url) {
   return { cities, counties };
 }
 
-get_aditonal_city(
-  "https://www.heidelbergmaterials.ro/ro/responsabil-investitii"
-);
-
 const getJobs = async () => {
   let url =
     " https://www.heidelbergmaterials.ro/ro/anunturi-de-angajare?field_job_offer_entry_level=16&field_job_offer_contract_type=13";
