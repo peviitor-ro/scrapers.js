@@ -1,6 +1,9 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const {
+  removeDiacritics,
+  getTownAndCounty,
+} = require("../getTownAndCounty.js");
 
 const url = "https://888sparkware.ro";
 
@@ -14,19 +17,21 @@ s.soup
     const jobs = soup.findAll("div", { class: "position-container" });
 
     jobs.forEach((job) => {
-      const id = uuid.v4();
       const job_title = job
         .find("div", { class: "position-title" })
         .text.trim();
       const job_link = job.find("a", { class: "position-link" }).attrs.href;
-      const city = job.find("div", { class: "position-location" }).text.trim();
+      const city = removeDiacritics(
+        job.find("div", { class: "position-location" }).text.trim()
+      );
+      const county = getTownAndCounty(city);
 
       finalJobs.push({
-        id: id,
         job_title: job_title,
         job_link: job_link,
         country: "Romania",
         city: city,
+        county: county.county,
         company: company.company,
       });
     });

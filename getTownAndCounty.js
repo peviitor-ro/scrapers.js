@@ -13940,16 +13940,14 @@ const getTownAndCounty = (town) => {
   let county = false;
   let foudedTown = false;
   let townWithoutDiacritics = removeDiacritics(town.toLowerCase());
-  for (let i = 0; i < counties.length; i++) {
-    for (let j = 0; j < counties[i][Object.keys(counties[i])[0]].length; j++) {
+  for (const countyObj of counties) {
+    for (const townName of countyObj[Object.keys(countyObj)[0]]) {
       if (
         townWithoutDiacritics ===
-        removeDiacritics(
-          counties[i][Object.keys(counties[i])[0]][j].toLowerCase()
-        )
+        removeDiacritics(townName.toLowerCase())
       ) {
-        county = Object.keys(counties[i])[0];
-        foudedTown = counties[i][Object.keys(counties[i])[0]][j];
+        county = Object.keys(countyObj)[0];
+        foudedTown = townName;
         break;
       }
     }
@@ -13960,5 +13958,6 @@ const getTownAndCounty = (town) => {
 
 module.exports = {
   getTownAndCounty,
+  removeDiacritics,
   counties,
 };
