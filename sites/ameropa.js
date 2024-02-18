@@ -1,3 +1,4 @@
+// TODO: Add city and county to the Ameropa jobs
 "use strict";
 const scraper = require("../peviitor_scraper.js");
 
