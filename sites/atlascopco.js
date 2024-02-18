@@ -30,7 +30,7 @@ const getJobs = async () => {
       generateJob(
         item.Title,
         "https://www.atlascopco.com" + item.path,
-        item.LocationsStr.replace(" ", "").split(","),
+        "Romania",
         foudedTown ? foudedTown : "All",
         county ? county : "All",
         item.LocationTag

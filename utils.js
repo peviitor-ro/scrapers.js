@@ -1,4 +1,4 @@
-const { counties } = require("./getTownAndCounty.js")
+const { counties } = require("./getTownAndCounty.js");
 
 const findCity = (sentence) => {
   /**
@@ -88,8 +88,24 @@ const replace_char = (sentence, chars = [], charToReplace = "") => {
   return new_sentence;
 };
 
+const get_jobtype = (sentence) => {
+  /**
+   * @summary This function finds the job type in a sentence
+   * @param {String} sentence
+   *
+   * @returns {String} job type
+   */
+
+  const job_types = ["remote", "hybrid"];
+
+  const jobType = job_types.filter((type) => sentence.includes(type));
+
+  return jobType;
+};
+
 module.exports = {
   findCity,
   translate_city,
   replace_char,
+  get_jobtype,
 };

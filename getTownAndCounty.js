@@ -5139,7 +5139,7 @@ const counties = [
   },
   {
     Covasna: [
-      "Sfantu  Gheorghe",
+      "Sfantu Gheorghe",
       "Targu Secuiesc",
       "Covasna",
       "Intorsura Buzaului",
@@ -6374,7 +6374,6 @@ const counties = [
       "Obedeni",
       "Corbeanca",
       "Radu Voda",
-      "Sfantu Gheorghe",
       "Sterea",
       "Dimitrie Cantemir",
       "Teiusu",

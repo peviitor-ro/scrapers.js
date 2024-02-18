@@ -1,5 +1,8 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty, removeDiacritics} = require("../getTownAndCounty.js");
+const {
+  getTownAndCounty,
+  removeDiacritics,
+} = require("../getTownAndCounty.js");
 const { replace_char, findCity } = require("../utils.js");
 
 const generateJob = (job_title, job_link, city, county) => ({
@@ -12,11 +15,11 @@ const generateJob = (job_title, job_link, city, county) => ({
 
 const getJobs = async () => {
   const acurateCities = {
-    "satu-mare":{foudedTown:"Satu Mare",county:"Satu Mare"},
-    "bihor":{foudedTown:"Oradea",county:"Bihor"},
-    "alba":{foudedTown:"Alba Iulia",county:"Alba"},
-    "cluj":{foudedTown:"Cluj-Napoca",county:"Cluj"},
-  }
+    "satu-mare": { foudedTown: "Satu Mare", county: "Satu Mare" },
+    bihor: { foudedTown: "Oradea", county: "Bihor" },
+    alba: { foudedTown: "Alba Iulia", county: "Alba" },
+    cluj: { foudedTown: "Cluj-Napoca", county: "Cluj" },
+  };
   const url = "https://agricover.ro/cariere";
   const scraper = new Scraper(url);
 
@@ -26,7 +29,7 @@ const getJobs = async () => {
   const jobs = [];
   items.forEach((item) => {
     const cities = [];
-    
+
     const job_title = item.find("h3").text.trim();
     const job_link = "https://agricover.ro" + item.find("a").attrs.href;
 
@@ -39,24 +42,24 @@ const getJobs = async () => {
     // get acurate cities
     senteces.forEach((sentence) => {
       try {
-        const { foudedTown, county } = acurateCities[removeDiacritics(sentence.toLowerCase())];
+        const { foudedTown, county } =
+          acurateCities[removeDiacritics(sentence.toLowerCase())];
         cities.push(foudedTown);
         counties.push(county);
       } catch (error) {}
     });
 
     // get the rest of the cities
-    const city
-     = findCity(
-      replace_char(removeDiacritics(item.find("h5").text), ["(", ")", ",", ".", "/"], " ")
+    const city = findCity(
+      replace_char(
+        removeDiacritics(item.find("h5").text),
+        ["(", ")", ",", ".", "/"],
+        " "
+      )
     );
-    
-    // merge the cities
-    const newCities = [
-      ...cities,
-      ...city
 
-    ]
+    // merge the cities
+    const newCities = [...cities, ...city];
 
     // get the counties
     const counties = [
@@ -90,7 +93,7 @@ const run = async () => {
 };
 
 if (require.main === module) {
-    run();
+  run();
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
