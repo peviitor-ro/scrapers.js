@@ -2,7 +2,7 @@ const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, city, county, remote) => ({
+const generateJob = (job_title, job_link, remote, city, county) => ({
   job_title,
   job_link,
   country: "Romania",
@@ -28,14 +28,14 @@ const getJobs = async () => {
       const city = job.locatie;
       const remote = [];
 
-      if (city === "Remote") {
+      if (city.includes("Remote")) {
         remote.push("Remote");
         jobs.push(generateJob(job_title, job_link, remote));
       } else {
         const { foudedTown, county } = getTownAndCounty(
           translate_city(city.toLowerCase())
         );
-        jobs.push(generateJob(job_title, job_link, foudedTown, county, remote));
+        jobs.push(generateJob(job_title, job_link, remote, foudedTown, county));
       }
     });
     url = "https://careers.altenromania.ro/jds/" + (i + 1);
@@ -49,7 +49,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Alten";
   const logo = "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
-  const apikey = process.env.APIKEY;
+  const apikey = "process.env.APIKEY";
   const params = {
     company,
     logo,
