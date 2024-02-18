@@ -1,9 +1,9 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const url =
-  "https://jobsearch.alstom.com/search/?q=&locationsearch=Romania";
+const url = "https://jobsearch.alstom.com/search/?q=&locationsearch=Romania";
 
 const company = { company: "Alstom" };
 let finalJobs = [];
@@ -17,7 +17,7 @@ s.soup.then((soup) => {
   let pages = scraper.range(0, totalJobs, 25);
 
   const fetchData = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let jobs = [];
       pages.forEach((page) => {
         const url = `https://jobsearch.alstom.com/search/?q=&locationsearch=Romania&startrow=${page}`;
@@ -39,20 +39,22 @@ s.soup.then((soup) => {
   fetchData()
     .then((jobs) => {
       jobs.forEach((job) => {
-        const id = uuid.v4();
         const job_title = job.find("a").text.trim();
         const job_link =
           "https://jobsearch.alstom.com" + job.find("a").attrs.href;
-        const city = job.find("span", { class: "jobLocation" }).text.split(",")[0].trim();
+        const city = translate_city(
+          job.find("span", { class: "jobLocation" }).text.split(",")[0].trim()
+        );
+        const { foudedTown, county } = getTownAndCounty(city);
 
         finalJobs.push({
-            id: id,
-            job_title: job_title,
-            job_link: job_link,
-            company: company.company,
-            city: city,
-            country: "Romania",
-          });
+          job_title: job_title,
+          job_link: job_link,
+          company: company.company,
+          city: foudedTown,
+          county: county,
+          country: "Romania",
+        });
       });
     })
     .then(() => {
