@@ -45,15 +45,11 @@ s.post(data).then((response) => {
         const job_title = job.title;
         const job_link =
           "https://ag.wd3.myworkdayjobs.com/en-US/Airbus" + job.externalPath;
-        let city = job.locationsText.split(",")[0];
-
-        if (city === "Bucarest") {
-          city = "Bucuresti";
-        }
-
-        const { foudedTown, county } = getTownAndCounty(
-          translate_city(city.toLowerCase())
+        let city = translate_city(
+          job.locationsText.split(",")[0].replace("Bucarest", "Bucuresti")
         );
+
+        const { foudedTown, county } = getTownAndCounty(city);
 
         jobs.push({
           job_title: job_title,
