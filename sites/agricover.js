@@ -1,8 +1,6 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty, counties, removeDiacritics} = require("../getTownAndCounty.js");
+const { getTownAndCounty, removeDiacritics} = require("../getTownAndCounty.js");
 const { replace_char, findCity } = require("../utils.js");
-
-
 
 const generateJob = (job_title, job_link, city, county) => ({
   job_title,
@@ -38,6 +36,7 @@ const getJobs = async () => {
       " "
     ).split(" ");
 
+    // get acurate cities
     senteces.forEach((sentence) => {
       try {
         const { foudedTown, county } = acurateCities[removeDiacritics(sentence.toLowerCase())];
@@ -46,17 +45,20 @@ const getJobs = async () => {
       } catch (error) {}
     });
 
-    
+    // get the rest of the cities
     const city
      = findCity(
       replace_char(removeDiacritics(item.find("h5").text), ["(", ")", ",", ".", "/"], " ")
     );
     
+    // merge the cities
     const newCities = [
       ...cities,
       ...city
 
     ]
+
+    // get the counties
     const counties = [
       ...new Set(newCities.map((c) => getTownAndCounty(c).county)),
     ];
@@ -72,7 +74,7 @@ const getParams = () => {
   const company = "Agricover";
   const logo =
     "https://agricover.ro/Files/Images/AgricoverCorporate/logo/svg/logo-positive.svg";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
