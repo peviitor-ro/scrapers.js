@@ -48,4 +48,13 @@ s.soup
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
     scraper.postApiPeViitor(finalJobs, company);
+
+    let logo =
+      "https://amdaris.com/wp-content/themes/amdaris/icons/logos/amdaris_logo_blue_insight.svg";
+
+    let postLogo = new scraper.ApiScraper(
+      "https://api.peviitor.ro/v1/logo/add/"
+    );
+    postLogo.headers.headers["Content-Type"] = "application/json";
+    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });
