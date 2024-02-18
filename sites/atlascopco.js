@@ -2,12 +2,13 @@ const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, country, city, county) => ({
+const generateJob = (job_title, job_link, country, city, county, remote) => ({
   job_title,
   job_link,
   country,
   city,
   county,
+  remote,
 });
 
 const getJobs = async () => {
@@ -19,11 +20,7 @@ const getJobs = async () => {
   const json = res.jobs;
   const jobs = [];
   json.forEach((item) => {
-
     let city = item.Cities;
-    if (city === "Cluj") {
-      city = "Cluj-Napoca";
-    }
 
     const { foudedTown, county } = getTownAndCounty(
       translate_city(city.toLowerCase())
@@ -33,9 +30,10 @@ const getJobs = async () => {
       generateJob(
         item.Title,
         "https://www.atlascopco.com" + item.path,
-        item.LegEntCountry,
-        foudedTown,
-        county
+        item.LocationsStr.replace(" ", "").split(","),
+        foudedTown ? foudedTown : "All",
+        county ? county : "All",
+        item.LocationTag
       )
     );
   });
@@ -62,7 +60,7 @@ const run = async () => {
 };
 
 if (require.main === module) {
-    run();
+  run();
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
