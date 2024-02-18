@@ -41,13 +41,11 @@ const getJobs = async () => {
       city = "Timisoara";
     }
 
-    const { foudedTown, county } = getTownAndCounty(
-      translate_city(city.toLowerCase())
+    const { county } = getTownAndCounty(
+      translate_city(city)
     );
 
-    console.log(foudedTown, county);
-
-    const job = generateJob(job_title, job_link, city);
+    const job = generateJob(job_title, job_link, city, county);
     jobs.push(job);
   });
 
