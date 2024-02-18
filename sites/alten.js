@@ -49,7 +49,7 @@ const getJobs = async () => {
 const getParams = () => {
   const company = "Alten";
   const logo = "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
