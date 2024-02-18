@@ -1,3 +1,4 @@
+// TODO: checking if the city is in the list of cities from the website
 "use strict";
 const scraper = require("../peviitor_scraper.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
