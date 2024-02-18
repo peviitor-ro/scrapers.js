@@ -48,4 +48,13 @@ s.soup
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
     scraper.postApiPeViitor(finalJobs, company);
+
+    let logo =
+      "https://lever-client-logos.s3.amazonaws.com/dfa07fbc-23b8-4677-9df5-6bb3d39f07db-1511999864878.png";
+
+    let postLogo = new scraper.ApiScraper(
+      "https://api.peviitor.ro/v1/logo/add/"
+    );
+    postLogo.headers.headers["Content-Type"] = "application/json";
+    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
   });

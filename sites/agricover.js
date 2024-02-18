@@ -1,5 +1,8 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { getTownAndCounty, counties, removeDiacritics} = require("../getTownAndCounty.js");
+const { replace_char, findCity } = require("../utils.js");
+
+
 
 const generateJob = (job_title, job_link, city, county) => ({
   job_title,
@@ -10,6 +13,12 @@ const generateJob = (job_title, job_link, city, county) => ({
 });
 
 const getJobs = async () => {
+  const acurateCities = {
+    "satu-mare":{foudedTown:"Satu Mare",county:"Satu Mare"},
+    "bihor":{foudedTown:"Oradea",county:"Bihor"},
+    "alba":{foudedTown:"Alba Iulia",county:"Alba"},
+    "cluj":{foudedTown:"Cluj-Napoca",county:"Cluj"},
+  }
   const url = "https://agricover.ro/cariere";
   const scraper = new Scraper(url);
 
@@ -18,23 +27,41 @@ const getJobs = async () => {
 
   const jobs = [];
   items.forEach((item) => {
-    let city = [];
-    const counties = [];
+    const cities = [];
+    
     const job_title = item.find("h3").text.trim();
-    const job_link =  "https://agricover.ro" + item.find("a").attrs.href;
-    const citys = item.find("h5").text.split(" ")
-    citys.forEach((c) => {
-      const replacedChars = ["(", ")", ",", ".", "/"];
-      replacedChars.forEach((char) => {
-        c = c.replace(char, "");
-      });
-      if (getTownAndCounty(c).foudedTown) {
-        const { foudedTown, county } = getTownAndCounty(c);
-        city.push(foudedTown);
+    const job_link = "https://agricover.ro" + item.find("a").attrs.href;
+
+    const senteces = replace_char(
+      item.find("h5").text,
+      ["(", ")", ",", ".", "/"],
+      " "
+    ).split(" ");
+
+    senteces.forEach((sentence) => {
+      try {
+        const { foudedTown, county } = acurateCities[removeDiacritics(sentence.toLowerCase())];
+        cities.push(foudedTown);
         counties.push(county);
-      }
+      } catch (error) {}
     });
-    const job = generateJob(job_title, job_link, city, counties);
+
+    
+    const city
+     = findCity(
+      replace_char(removeDiacritics(item.find("h5").text), ["(", ")", ",", ".", "/"], " ")
+    );
+    
+    const newCities = [
+      ...cities,
+      ...city
+
+    ]
+    const counties = [
+      ...new Set(newCities.map((c) => getTownAndCounty(c).county)),
+    ];
+
+    const job = generateJob(job_title, job_link, newCities, counties);
     jobs.push(job);
   });
 
@@ -45,7 +72,7 @@ const getParams = () => {
   const company = "Agricover";
   const logo =
     "https://agricover.ro/Files/Images/AgricoverCorporate/logo/svg/logo-positive.svg";
-  const apikey = process.env.APIKEY;
+  const apikey = "process.env.APIKEY";
   const params = {
     company,
     logo,

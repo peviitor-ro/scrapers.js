@@ -1,5 +1,4 @@
-const counties = require("./getTownAndCounty.js").counties;
-const { Scraper } = require("peviitor_jsscraper");
+const { counties } = require("./getTownAndCounty.js")
 
 const findCity = (sentence) => {
   /**
@@ -14,44 +13,31 @@ const findCity = (sentence) => {
    * @returns {String} city
    */
 
-  // split sentence into words
-  const splitsSentence = sentence.split(" ");
-
-  // create an array of supposed cities
-  const supposedCity = [];
-  // iterate over each word
-  splitsSentence.forEach((word) => {
-    // iterate over each county
-    counties.forEach((county) => {
-      // iterate over each city
-      Object.values(county).forEach((value) => {
-        value.forEach((city) => {
-          for (let i = 0; i < splitsSentence.length; i++) {
-            for (let j = i; j < splitsSentence.length; j++) {
-              let newWord = splitsSentence.slice(i, j + 1).join(" ");
-              if (
-                city.toLowerCase() ===
-                translate_city(newWord.toLowerCase()).toLowerCase()
-              ) {
-                if (
-                  sentence.toLowerCase().indexOf(newWord.toLowerCase()) !== -1
-                ) {
-                  if (!supposedCity.includes(city)) {
-                    supposedCity.push(city);
-                  }
-                }
-              }
-            }
-          }
+  const allCities = counties
+    .map((county) => {
+      return Object.values(county).map((value) => {
+        return value.map((city) => {
+          return city.replace("-", " ");
         });
       });
-    });
-  });
-  // split each city in the array into an array of words
-  let arrays = [...supposedCity.map((city) => city.split(" "))];
-  // sort the arrays by length
-  let longest = arrays.sort((a, b) => b.length - a.length)[0];
-  return longest.join(" ");
+    })
+    .flat(2)
+    .sort();
+
+  const uniqueCities = [...new Set(allCities)];
+
+  // split sentence into words
+  const splitsSentence = sentence.split(" ");
+  // create an array of supposed cities
+  const supposedCity = [
+    ...uniqueCities.filter((city) =>
+      splitsSentence
+        .map((word) => word.toLowerCase())
+        .includes(city.toLowerCase())
+    ),
+  ];
+
+  return [...new Set(supposedCity)];
 };
 
 const translate_city = (city) => {

@@ -1,10 +1,13 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, country, city) => ({
+const generateJob = (job_title, job_link, country, city, county) => ({
   job_title,
   job_link,
   country,
   city,
+  county,
 });
 
 const getJobs = async () => {
@@ -40,8 +43,9 @@ const getJobs = async () => {
       const job_link = job_link_prefix + externalPath;
       const separatorIndex = locationsText.indexOf(",");
       const country = locationsText.substring(0, separatorIndex);
-      const city = locationsText.substring(separatorIndex + 1);
-      const job = generateJob(title, job_link, country, city);
+      const city = translate_city(locationsText.substring(separatorIndex + 1));
+      const { county } = getTownAndCounty(city);
+      const job = generateJob(title, job_link, country, city, county);
       jobs.push(job);
     });
   }
