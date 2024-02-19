@@ -1,6 +1,7 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 
 let url =
   "https://node.bolt.eu/careers-portal/careersPortal/v3/getJobs/?version=CP.4.07";
@@ -19,20 +20,20 @@ s.get()
       const locations = job.locations;
       locations.forEach((location) => {
         if (location.country == "Romania") {
-          const id = uuid.v4();
           const job_title = job.title;
           const job_link = "https://bolt.eu/en/careers/positions/" + job.id;
-          const city = location.city;
+          const city = translate_city(location.city);
+          const { county } = getTownAndCounty(city);
 
           finalJobs.push({
-            id: id,
             job_title: job_title,
             job_link: job_link,
             company: company.company,
             country: "Romania",
             city: city,
+            county: county,
           });
-        };
+        }
       });
     });
   })
