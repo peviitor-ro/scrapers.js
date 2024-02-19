@@ -20,32 +20,34 @@ s.soup
       const job_title = job.header_data.vacancy_title;
       const job_link = job.slug;
 
-      const citys = [];
-      const countys = [];
+      const cities = [];
+      const counties = [];
 
       const locations = JSON.parse(job.header_data.filter_location);
 
-      locations.forEach((location) => {
-        const { foudedTown, county } = getTownAndCounty(
-          translate_city(location.city.toLowerCase().trim())
-        );
+      if (locations.length === 0) {
+        cities.push("All");
+        counties.push("All");
+      } else {
+        locations.forEach((location) => {
+          const { foudedTown, county } = getTownAndCounty(
+            translate_city(location.city.toLowerCase().trim())
+          );
 
-        if (foudedTown && county) {
-          citys.push(foudedTown);
-          countys.push(county);
-        }
-      });
-
-      if (citys.length >= 1 && countys.length >= 1) {
-        finalJobs.push({
-          job_title: job_title,
-          job_link: job_link,
-          company: company.company,
-          country: "Romania",
-          city: citys,
-          county: countys,
+          if (foudedTown && county) {
+            cities.push(foudedTown);
+            counties.push(county);
+          }
         });
       }
+      finalJobs.push({
+        job_title: job_title,
+        job_link: job_link,
+        company: company.company,
+        country: "Romania",
+        city: cities,
+        county: counties,
+      });
     });
   })
   .then(() => {
