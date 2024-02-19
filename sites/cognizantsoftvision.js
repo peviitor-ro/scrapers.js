@@ -6,6 +6,7 @@ const generateJob = (job_title, job_link) => ({
   country: "Romania",
   county: ["Maramures", "București", "Cluj", "Iași", "Timiș"],
   city: ["Baia Mare", "București", "Cluj-Napoca", "Iași", "Timișoara"],
+  remote: ["Remote", "Hybrid"],
 });
 
 const getJobs = async () => {
@@ -36,7 +37,7 @@ const getParams = () => {
   const company = "CognizantSoftvision";
   const logo =
     "https://www.cognizantsoftvision.com/react-images/logos/logo-header.png";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,
