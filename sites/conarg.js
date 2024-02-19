@@ -3,10 +3,9 @@ const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const generateJob = (job_title, job_link, country, county, city) => ({
   job_title,
   job_link,
-  country,
-  county,
-  city,
-  remote: [],
+  country: "Romania",
+  county: "Bucuresti",
+  city: "Bucuresti",
 });
 
 const getJobs = async () => {
@@ -22,11 +21,8 @@ const getJobs = async () => {
   jobsElements.forEach((job) => {
     const job_title = job.find("h2").text.trim();
     const job_link = "https://www.conarg.co" + job.find("a").attrs.href;
-    const country = "Romania";
-    const county = "Bucuresti";
-    const city = "Bucuresti";
 
-    jobs.push(generateJob(job_title, job_link, country, county, city));
+    jobs.push(generateJob(job_title, job_link));
   });
 
   return jobs;
