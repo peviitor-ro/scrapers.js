@@ -68,5 +68,14 @@ s.post(data)
 
       console.log(JSON.stringify(finalJobs, null, 2));
       scraper.postApiPeViitor(finalJobs, company);
+
+      let logo =
+        "https://cdn.continental.com/fileadmin/_processed_/3/b/csm_continental_20logo-1920x1080_247d99d89e.png";
+
+      let postLogo = new scraper.ApiScraper(
+        "https://api.peviitor.ro/v1/logo/add/"
+      );
+      postLogo.headers.headers["Content-Type"] = "application/json";
+      postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
     });
   });
