@@ -28,9 +28,7 @@ s.soup
       const remote = [];
       if (cityArray && cityArray.length >= 2) {
         const obj = getTownAndCounty(
-          translate_city(cityArray[1]
-            .replace("-", " ")
-            .toLowerCase())
+          translate_city(cityArray[1].replace("-", " ").toLowerCase())
         );
         city = obj.foudedTown;
         county = obj.county;
