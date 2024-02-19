@@ -1,6 +1,6 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city } = require("../utils.js");
+const { translate_city, get_jobtype } = require("../utils.js");
 
 const generateJob = (job_title, job_link, city, county, remote) => ({
   job_title,
@@ -15,35 +15,22 @@ const getAditionalCity = async (url) => {
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("JSON");
 
-  const citys = res.jobPostingInfo.additionalLocations;
-  const is_remote = res.jobPostingInfo.location.split("-");
-  const remote =
-    is_remote[is_remote.length - 1].trim().toLowerCase() === "remote"
-      ? ["Remote"]
-      : [];
+  const cities = res.jobPostingInfo.additionalLocations;
+  const remote = get_jobtype(res.jobPostingInfo.location.toLowerCase());
 
-  if (citys) {
-    for (let i = 0; i < citys.length; i++) {
-      const splits = citys[i].split("-");
+  if (cities) {
+    for (let i = 0; i < cities.length; i++) {
+      const splits = cities[i].split("-");
       let city = translate_city(splits[splits.length - 1].trim().toLowerCase());
-      let finded_city = "";
-      let finded_county = "";
-
-      if (city.trim().toLowerCase() === "remote") {
-        finded_county = "";
-        finded_city = "Romania";
-      } else {
-        const { foudedTown, county } = getTownAndCounty(city);
-        if (county) {
-          finded_county = county;
-          finded_city = foudedTown;
-        }
-      }
-      return { foudedTown: finded_city, county: finded_county, remote };
+      const { foudedTown, county } = getTownAndCounty(city);
+      return {
+        foudedTown: foudedTown ? foudedTown : "",
+        county: county ? county : "",
+        remote: remote,
+      };
     }
-  } else {
-    return { foudedTown: "", county: "", remote };
   }
+  return { foudedTown: "", county: "", remote };
 };
 
 const getJobs = async () => {
@@ -79,33 +66,27 @@ const getJobs = async () => {
         const job_link_prefix =
           "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
         const job_link = job_link_prefix + externalPath;
+        const remote = get_jobtype(locationsText.toLowerCase());
         const separatorIndex = locationsText.indexOf(" ");
-        let city = translate_city(locationsText.substring(0, separatorIndex));
+        const city = translate_city(locationsText.substring(0, separatorIndex));
 
-        let { foudedTown, county } = getTownAndCounty(city);
+        const job = generateJob(title, job_link, "", "", remote);
+        const { foudedTown, county } = getTownAndCounty(city);
 
-        const isCounty = async () => {
-          if (county) {
-            const res = {
-              foudedTown,
-              county,
-              remote: [],
-            };
-            return res;
-          } else {
-            const jobName = externalPath.split("/");
-            const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
-              jobName[jobName.length - 1]
-            }`;
-            return await getAditionalCity(url);
-          }
-        };
-
-        const res = await isCounty();
-
-        jobs.push(
-          generateJob(title, job_link, res.foudedTown, res.county, res.remote)
-        );
+        if (foudedTown && county) {
+          job.city = foudedTown;
+          job.county = county;
+        } else {
+          const jobName = externalPath.split("/");
+          const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
+            jobName[jobName.length - 1]
+          }`;
+          const { foudedTown, county, remote } = await getAditionalCity(url);
+          job.city = foudedTown;
+          job.county = county;
+          job.remote = remote;
+        }
+        jobs.push(job);
       })
     );
   }
@@ -116,7 +97,7 @@ const getParams = () => {
   const company = "CrowdStrike";
   const logo =
     "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
-  const apikey = process.env.APIKEY;
+  const apikey = "process.env.APIKEY";
   const params = {
     company,
     logo,
