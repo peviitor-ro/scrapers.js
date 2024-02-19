@@ -1,6 +1,6 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const { translate_city } = require("../utils.js");
+const { translate_city, get_jobtype } = require("../utils.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 
 let url =
@@ -25,28 +25,14 @@ s.soup
         .split("-");
 
       const cities = [];
-      const countries = [];
-      let remote = [];
+      const counties = [];
+      const remote = get_jobtype(job_title.toLowerCase());
 
-      if (job_title.toLowerCase().includes("remote")) {
-        remote.push("Remote");
-      } else {
-        locations.forEach((location) => {
-          const city = translate_city(
-            location.trim().replace("&#039;", "").trim()
-          );
-          const { foudedTown, county } = getTownAndCounty(city);
-
-          if (
-            foudedTown &&
-            county &&
-            !cities.includes(foudedTown) &&
-            !countries.includes(county)
-          ) {
-            cities.push(foudedTown);
-            countries.push(county);
-          }
-        });
+      if (!remote.includes("remote")) {
+        const city = translate_city(locations[0].replace("&#039;", "").trim());
+        const { foudedTown, county } = getTownAndCounty(city);
+        cities.push(foudedTown);
+        counties.push(county);
       }
 
       finalJobs.push({
@@ -55,15 +41,16 @@ s.soup
         company: company.company,
         country: "Romania",
         city: cities,
-        county: countries,
-        remote: remote
+        county: counties,
+        remote: remote,
       });
     });
   })
   .then(() => {
     console.log(JSON.stringify(finalJobs, null, 2));
     scraper.postApiPeViitor(finalJobs, company);
-    let logo = "https://www.logo.wine/a/logo/CBRE_Group/CBRE_Group-Logo.wine.svg";
+    let logo =
+      "https://www.logo.wine/a/logo/CBRE_Group/CBRE_Group-Logo.wine.svg";
     let postLogo = new scraper.ApiScraper(
       "https://api.peviitor.ro/v1/logo/add/"
     );
