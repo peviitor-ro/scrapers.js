@@ -1,6 +1,5 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
 
 const url = "https://brightantity.com/engineering-product-development-rd/";
 const url2 = "https://brightantity.com/it-software-development/";
@@ -17,15 +16,14 @@ Promise.all([s.soup, s2.soup])
         const jobsS2 = Object.values(soup2.findAll("h2", { class: "eael-entry-title" }));
         const jobs = [...jobsS, ...jobsS2];
         jobs.forEach((job) => {
-            const id = uuid.v4();
             const job_title = job.find("a").text.trim();
             const job_link = job.find("a").attrs.href;
             finalJobs.push({
-                id: id,
                 job_title: job_title,
                 job_link: job_link,
                 company: company.company,
-                city: "Bucharest",
+                city: "Bucuresti",
+                county: "Bucuresti",
                 country: "Romania",
             });
 
