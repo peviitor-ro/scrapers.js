@@ -1,6 +1,6 @@
 "use strict";
 const scraper = require("../peviitor_scraper.js");
-const { translate_city } = require("../utils.js");
+const { translate_city, get_jobtype } = require("../utils.js");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 
 const url = "https://bearingpoint-romania.hirehive.com";
@@ -27,34 +27,31 @@ s.soup
         "https://bearingpoint-romania.hirehive.com" + job.attrs.href;
       const locations = job
         .find("div", { class: "hh-job-row-location" })
-        .text.replace("and", ",")
-        .split(",");
+        .text.replace("and", ",");
 
-      let cities = [];
-      let counties = [];
-      let remote = [];
+      const default_cities = ["Bucuresti", "Sibiu", "Timisoara", "Iasi"];
+      const default_counties = ["Bucuresti", "Sibiu", "Timis", "Iasi"];
+      const cities = [];
+      const counties = [];
+      const remote = get_jobtype(locations.toLowerCase().trim());
 
-      if (locations[0].trim() === "Hybrid") {
-        remote.push("Hybrid");
-        cities = ["Bucuresti", "Sibiu", "Timisoara", "Iasi"];
-        counties = ["Bucuresti", "Sibiu", "Timis", "Iasi"];
-      } else if (locations[0].trim() === "Romania") {
-        cities = ["Bucuresti", "Sibiu", "Timisoara", "Iasi"];
-        counties = ["Bucuresti", "Sibiu", "Timis", "Iasi"];
+      if (
+        locations.split(",")[0].trim() == "Romania" ||
+        locations.split(",")[0].trim() == "Hybrid"
+      ) {
+        default_cities.forEach((city) => cities.push(city));
+        default_counties.forEach((county) => counties.push(county));
       } else {
-        locations.forEach((location) => {
+        locations.split(",").forEach((location) => {
           const city = translate_city(location.trim());
-
           if (acurate_city[city]) {
             cities.push(acurate_city[city].city);
             counties.push(acurate_city[city].county);
           } else {
             const { foudedTown, county } = getTownAndCounty(city);
 
-            if (foudedTown && county) {
-              cities.push(foudedTown);
-              counties.push(county);
-            }
+            cities.push(foudedTown);
+            counties.push(county);
           }
         });
       }
