@@ -33,7 +33,7 @@ s.soup
       const default_counties = ["Bucuresti", "Sibiu", "Timis", "Iasi"];
       const cities = [];
       const counties = [];
-      const remote = get_jobtype(locations.toLowerCase().trim());
+      const remote = [get_jobtype(locations.toLowerCase().trim())];
 
       if (
         locations.split(",")[0].trim() == "Romania" ||
@@ -50,8 +50,10 @@ s.soup
           } else {
             const { foudedTown, county } = getTownAndCounty(city);
 
-            cities.push(foudedTown);
-            counties.push(county);
+            if (foudedTown && county) {
+              cities.push(foudedTown);
+              counties.push(county);
+            }
           }
         });
       }
