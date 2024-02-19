@@ -62,7 +62,6 @@ s.soup.then((soup) => {
     })
     .then(() => {
       console.log(JSON.stringify(finalJobs, null, 2));
-      console.log(finalJobs.length);
 
       scraper.postApiPeViitor(finalJobs, company);
 
