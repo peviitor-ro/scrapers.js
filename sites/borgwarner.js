@@ -40,7 +40,7 @@ const getParams = () => {
   const company = "BorgWarner";
   const logo =
     "https://www.tyrepress.com/wp-content/uploads/2023/06/borgwarner-logo-550x191.png";
-  const apikey = "process.env.APIKEY";
+  const apikey = process.env.APIKEY;
   const params = {
     company,
     logo,

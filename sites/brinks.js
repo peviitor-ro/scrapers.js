@@ -1,14 +1,18 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city, replace_char } = require("../utils.js");
+const { translate_city, replace_char, findCity } = require("../utils.js");
 
-const generateJob = (job_title, job_link, city, county, remote) => ({
+const pattern = /Locatii: (.*)./g;
+const test =
+  "Asigurarea securitatii autovehiculului si a continutului transportului de valori. Locatii: Alba Iulia, Arad, Bucuresti, Bacau, Baia Mare, Brasov, Buzau, Calarasi, Cluj Napoca, Constanta, Craiova, Galati, Iasi, Miercurea Ciuc, Oradea, Piatra Neamt, Pitesti, Ploiesti, Suceava, Targu Mures, Timisoara (Ghiroda), Zalau.";
+const matches = test.match(pattern);
+
+const generateJob = (job_title, job_link, city, county) => ({
   job_title,
   job_link,
   country: "Romania",
   city,
   county,
-  remote,
 });
 
 const getJobs = async () => {
@@ -21,46 +25,50 @@ const getJobs = async () => {
   let res = await scraper.get_soup("HTML");
   let items = res.findAll("div", { class: "card" });
 
+  const pattern = /Locatii: (.*)./g;
+
   while (items.length > 0) {
     items.forEach((item) => {
       const job_title = item.find("h2").text.trim();
-      const job_link = item.find("a").attrs.href;
-      let city = item
-        .find("p", { class: "subtitle" })
-        .text.trim()
-        .split(",")[0];
-      let citys = [];
-      const counties = [];
-      let { foudedTown, county } = getTownAndCounty(
-        translate_city(city.toLowerCase())
-      );
-      if (!foudedTown && !county) {
-        try {
-          const citys_elem = item
-            .findAll("p")[1]
-            .text.trim()
-            .split(":")[1]
-            .split(",");
-          citys_elem.forEach((city) => {
-            let edited_city = replace_char(city, ["(", ")", "."], "").replace(
-              "Ghiroda",
-              ""
-            );
-            const { foudedTown, county } = getTownAndCounty(
-              translate_city(edited_city.trim().toLowerCase())
-            );
-            if (county) {
-              counties.push(county);
-              citys.push(foudedTown);
-            }
-          });
-        } catch (error) {}
-      } else {
-        counties.push(county);
-        citys.push(foudedTown);
-      }
-      if (citys.length > 0) {
-        jobs.push(generateJob(job_title, job_link, citys, counties, []));
+      if (!job_title.includes("APLICA PROACTIV!")) {
+        const job_link = item.find("a").attrs.href;
+        const city_element = translate_city(
+          item.find("p", { class: "subtitle" }).text.trim().split(",")[0]
+        );
+
+        const { foudedTown, county } = getTownAndCounty(city_element);
+        if (foudedTown && county) {
+          jobs.push(generateJob(job_title, job_link, foudedTown, county));
+        } else {
+          const sentence = item
+            .findAll("p")
+            [item.findAll("p").length - 1].text.trim();
+          const matches = sentence.match(pattern);
+          if (matches) {
+            matches.forEach((match) => {
+              const cities = [];
+              const counties = [];
+              const citys_elem = match.split(":")[1].split(",");
+              citys_elem.forEach((city) => {
+                let edited_city = replace_char(
+                  city,
+                  ["(", ")", "."],
+                  ""
+                ).replace("Ghiroda", "");
+                const { foudedTown, county } = getTownAndCounty(
+                  translate_city(edited_city.trim().toLowerCase())
+                );
+                if (county) {
+                  counties.push(county);
+                  cities.push(foudedTown);
+                }
+              });
+              if (cities.length > 0) {
+                jobs.push(generateJob(job_title, job_link, cities, counties));
+              }
+            });
+          }
+        }
       }
     });
     page++;
