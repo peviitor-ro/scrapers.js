@@ -1,12 +1,11 @@
 const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 
-const generateJob = (job_title, job_link, country, county, city) => ({
+const generateJob = (job_title, job_link) => ({
   job_title,
   job_link,
-  country,
+  country: "Romania",
   county: ["Maramures", "București", "Cluj", "Iași", "Timiș"],
   city: ["Baia Mare", "București", "Cluj-Napoca", "Iași", "Timișoara"],
-  remote: [],
 });
 
 const getJobs = async () => {
@@ -26,7 +25,7 @@ const getJobs = async () => {
     if (job.location == "Romania") {
       const job_title = job.title;
       const job_link = "https://www.cognizantsoftvision.com" + job.link;
-      jobs.push(generateJob(job_title, job_link, "Romania"));
+      jobs.push(generateJob(job_title, job_link));
     }
   });
 
@@ -37,7 +36,7 @@ const getParams = () => {
   const company = "CognizantSoftvision";
   const logo =
     "https://www.cognizantsoftvision.com/react-images/logos/logo-header.png";
-  const apikey = process.env.APIKEY;
+  const apikey = "process.env.APIKEY";
   const params = {
     company,
     logo,
