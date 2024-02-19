@@ -33,7 +33,6 @@ const getJobs = async () => {
     } catch (error) {}
   });
 
-  console.log(jobs);
   return jobs;
 };
 
