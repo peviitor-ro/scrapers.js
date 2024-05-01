@@ -1,4 +1,5 @@
-const { counties } = require("./getTownAndCounty.js");
+const counties = require("./getTownAndCounty.js").counties;
+const { Scraper } = require("peviitor_jsscraper");
 
 const findCity = (sentence) => {
   /**
@@ -13,31 +14,44 @@ const findCity = (sentence) => {
    * @returns {String} city
    */
 
-  const allCities = counties
-    .map((county) => {
-      return Object.values(county).map((value) => {
-        return value.map((city) => {
-          return city.replace("-", " ");
-        });
-      });
-    })
-    .flat(2)
-    .sort();
-
-  const uniqueCities = [...new Set(allCities)];
-
   // split sentence into words
   const splitsSentence = sentence.split(" ");
-  // create an array of supposed cities
-  const supposedCity = [
-    ...uniqueCities.filter((city) =>
-      splitsSentence
-        .map((word) => word.toLowerCase())
-        .includes(city.toLowerCase())
-    ),
-  ];
 
-  return [...new Set(supposedCity)];
+  // create an array of supposed cities
+  const supposedCity = [];
+  // iterate over each word
+  splitsSentence.forEach((word) => {
+    // iterate over each county
+    counties.forEach((county) => {
+      // iterate over each city
+      Object.values(county).forEach((value) => {
+        value.forEach((city) => {
+          for (let i = 0; i < splitsSentence.length; i++) {
+            for (let j = i; j < splitsSentence.length; j++) {
+              let newWord = splitsSentence.slice(i, j + 1).join(" ");
+              if (
+                city.toLowerCase() ===
+                translate_city(newWord.toLowerCase()).toLowerCase()
+              ) {
+                if (
+                  sentence.toLowerCase().indexOf(newWord.toLowerCase()) !== -1
+                ) {
+                  if (!supposedCity.includes(city)) {
+                    supposedCity.push(city);
+                  }
+                }
+              }
+            }
+          }
+        });
+      });
+    });
+  });
+  // split each city in the array into an array of words
+  let arrays = [...supposedCity.map((city) => city.split(" "))];
+  // sort the arrays by length
+  let longest = arrays.sort((a, b) => b.length - a.length)[0];
+  return longest.join(" ");
 };
 
 const translate_city = (city) => {
@@ -48,23 +62,16 @@ const translate_city = (city) => {
    * @returns {String} city
    */
 
-  city = city.replace(" ", "_");
-
   // Populate this object with the cities that need translation
   const cities = {
     bucharest: "Bucuresti",
     cluj: "Cluj-Napoca",
-    cluj_napoca: "Cluj-Napoca",
-    targu_mures: "Targu-Mures",
-    bucuresti_ilfov: "Bucuresti",
-    tg_mures: "Targu-Mures",
-    târgu_mureș: "Targu-Mures",
   };
 
   if (cities[city.toLowerCase()]) {
-    return cities[city.toLowerCase()];
+    return cities[city];
   } else {
-    return city.replace("_", " ");
+    return city;
   }
 };
 
@@ -88,24 +95,8 @@ const replace_char = (sentence, chars = [], charToReplace = "") => {
   return new_sentence;
 };
 
-const get_jobtype = (sentence) => {
-  /**
-   * @summary This function finds the job type in a sentence
-   * @param {String} sentence
-   *
-   * @returns {String} job type
-   */
-
-  const job_types = ["remote", "hybrid"];
-
-  const jobType = job_types.filter((type) => sentence.includes(type));
-
-  return jobType;
-};
-
 module.exports = {
   findCity,
   translate_city,
   replace_char,
-  get_jobtype,
 };
