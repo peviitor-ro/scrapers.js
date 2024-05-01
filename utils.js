@@ -69,7 +69,7 @@ const translate_city = (city) => {
   };
 
   if (cities[city.toLowerCase()]) {
-    return cities[city];
+    return cities[city.toLowerCase()];
   } else {
     return city;
   }
