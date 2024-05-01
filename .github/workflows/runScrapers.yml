@@ -15,19 +15,6 @@ jobs:
     steps:
       - name: Checkout Source Repository
         uses: actions/checkout@v3
-      - name: mkdir sites
-        run: mkdir sites
-      - name: Checkout External Repository
-        uses: actions/checkout@v3
-        with:
-          repository: peviitor-ro/scrapers.js
-          ref: main
-          path: sites
-      - name: Remove everything but the sites folder
-        run: |
-          find sites/ -mindepth 1 -maxdepth 1 ! -name 'sites' -exec rm -r {} \;
-          mv sites/sites/* sites/
-          rm -r sites/sites
       - name: Setup Node
         uses: actions/setup-node@v1
         with:
