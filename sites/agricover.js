@@ -1,25 +1,14 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
 const {
-  getTownAndCounty,
-  removeDiacritics,
-} = require("../getTownAndCounty.js");
-const { replace_char, findCity } = require("../utils.js");
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
-  const acurateCities = {
-    "satu-mare": { foudedTown: "Satu Mare", county: "Satu Mare" },
-    bihor: { foudedTown: "Oradea", county: "Bihor" },
-    alba: { foudedTown: "Alba Iulia", county: "Alba" },
-    cluj: { foudedTown: "Cluj-Napoca", county: "Cluj" },
-  };
   const url = "https://agricover.ro/cariere";
   const scraper = new Scraper(url);
 
@@ -27,68 +16,56 @@ const getJobs = async () => {
   const items = res.find("div", { class: "careers-list" }).findAll("div");
 
   const jobs = [];
-  items.forEach((item) => {
-    const cities = [];
 
-    const job_title = item.find("h3").text.trim();
-    const job_link = "https://agricover.ro" + item.find("a").attrs.href;
+  await Promise.all(
+    items.map(async (item) => {
+      let cities = [];
+      let counties = [];
+      const job_title = item.find("h3").text.trim();
+      const job_link = "https://agricover.ro" + item.find("a").attrs.href;
+      const country = "Romania";
+      const locations = item.find("h5").text.split(" ");
 
-    const senteces = replace_char(
-      item.find("h5").text,
-      ["(", ")", ",", ".", "/"],
-      " "
-    ).split(" ");
+      const locationPromises = locations.map(async (c) => {
+        const replacedChars = [
+          "(",
+          ")",
+          ",",
+          ".",
+          "/",
+          "Oras:",
+          "Regiunea",
+          "-",
+        ];
+        replacedChars.forEach((char) => {
+          c = c.replace(char, "");
+        });
 
-    // get acurate cities
-    senteces.forEach((sentence) => {
-      try {
-        const { foudedTown, county } =
-          acurateCities[removeDiacritics(sentence.toLowerCase())];
-        cities.push(foudedTown);
-        counties.push(county);
-      } catch (error) {}
-    });
+        if (c !== "") {
+          const { city, county } = await _counties.getCounties(c);
+          if (city) {
+            cities.push(city);
+            counties = [...new Set([...counties, ...county])];
+          }
+        }
+      });
 
-    // get the rest of the cities
-    const city = findCity(
-      replace_char(
-        removeDiacritics(item.find("h5").text),
-        ["(", ")", ",", ".", "/"],
-        " "
-      )
-    );
+      await Promise.all(locationPromises);
 
-    // merge the cities
-    const newCities = [...cities, ...city];
-
-    // get the counties
-    const counties = [
-      ...new Set(newCities.map((c) => getTownAndCounty(c).county)),
-    ];
-
-    const job = generateJob(job_title, job_link, newCities, counties);
-    jobs.push(job);
-  });
+      const job = generateJob(job_title, job_link, country, cities, counties);
+      jobs.push(job);
+    })
+  );
 
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Agricover";
   const logo =
     "https://agricover.ro/Files/Images/AgricoverCorporate/logo/svg/logo-positive.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo, "laurentiumarianbaluta@gmail.com");
   postApiPeViitor(jobs, params);
 };
 

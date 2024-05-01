@@ -2,4 +2,3 @@ node_modules
 __tests__/siteJobsCollection.json
 __tests__/paramsCollection.json
 /exclude
-.env
