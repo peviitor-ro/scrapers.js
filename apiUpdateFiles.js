@@ -2,7 +2,7 @@
 
 const axios = require("axios");
 
-const add = "https://dev.laurentiumarian.ro/scraper/add/";
+const add = "https://api.laurentiumarian.ro/scraper/add/";
 const remove = "https://dev.laurentiumarian.ro/scraper/remove/";
 
 axios.post(remove, {"repo": "based_scraper_js"})

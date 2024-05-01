@@ -1,19 +1,11 @@
 const Jssoup = require("jssoup").default;
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const { Scraper, postApiPeViitor, generateJob, getParams } = require("peviitor_jsscraper");
 const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
 
-const generateJob = (job_title, job_link, city, county) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-});
-
 const getJobs = async () => {
   const url =
-    "https://careers.abbvie.com/en/search-jobs/results?ActiveFacetID=798549-683504&CurrentPage=1&RecordsPerPage=100&Distance=100&RadiusUnitType=0&ShowRadius=False&IsPagination=False&FacetTerm=798549&FacetType=2&FacetFilters%5B0%5D.ID=798549&FacetFilters%5B0%5D.FacetType=2&FacetFilters%5B0%5D.Count=7&FacetFilters%5B0%5D.Display=Romania&FacetFilters%5B0%5D.IsApplied=true&FacetFilters%5B0%5D.FieldName=&SearchResultsModuleName=Search+Results&SearchFiltersModuleName=Search+Filters&SortCriteria=0&SortDirection=0&SearchType=3&OrganizationIds=14&ResultsType=0";
+    "https://careers.abbvie.com/en/jobs?q=&options=&page=1&ln=Romania&lr=100&li=RO";
   const scraper = new Scraper(url);
   const additionalHeaders = {
     "Content-Type": "application/json",
@@ -54,20 +46,10 @@ const getJobs = async () => {
   return jobs;
 };
 
-const getParams = () => {
-  const company = "Abbvie";
+const run = async () => {
+    const company = "Abbvie";
   const logo =
     "https://tbcdn.talentbrew.com/company/14/v2_0/img/abbvie-logo-color.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
   const params = getParams();
   postApiPeViitor(jobs, params);

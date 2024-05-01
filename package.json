@@ -23,11 +23,8 @@
   },
   "homepage": "https://github.com/VACostin/peviitor_jsscraper_sites#readme",
   "dependencies": {
-    "axios": "^1.4.0",
-    "jssoup": "^0.0.15",
-    "peviitor_jsscraper": "^1.0.2",
-    "querystring": "^0.2.1",
-    "uuid": "^9.0.0"
+    "peviitor_jsscraper": "^1.1.2",
+    "querystring": "^0.2.1"
   },
   "devDependencies": {
     "eslint": "^8.44.0",

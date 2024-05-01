@@ -1,11 +1,4 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-
-const generateJob = (job_title, job_link, country, city) => ({
-  job_title,
-  job_link,
-  country,
-  city,
-});
+const { Scraper, postApiPeViitor, generateJob, getParams } = require("peviitor_jsscraper");
 
 const getJobs = async () => {
   const url =
@@ -48,22 +41,12 @@ const getJobs = async () => {
   return jobs;
 };
 
-const getParams = () => {
-  const company = "Adient";
+const run = async () => {
+    const company = "Adient";
   const logo =
     "https://www.adient.com/wp-content/uploads/2021/09/Adient_Logo.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo, "laurentiumarianbaluta@gmail.com");
   postApiPeViitor(jobs, params);
 };
 

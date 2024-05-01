@@ -1,0 +1,40 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: JavaScript Scraper
+
+on:
+  schedule:
+    - cron: "40 18 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout Source Repository
+        uses: actions/checkout@v3
+      - name: mkdir sites
+        run: mkdir sites
+      - name: Checkout External Repository
+        uses: actions/checkout@v3
+        with:
+          repository: peviitor-ro/scrapers.js
+          ref: main
+          path: sites
+      - name: Remove everything but the sites folder
+        run: |
+          find sites/ -mindepth 1 -maxdepth 1 ! -name 'sites' -exec rm -r {} \;
+          mv sites/sites/* sites/
+          rm -r sites/sites
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18.x
+      - name: npm i
+        run: npm i
+      - name: node runScrapers.js
+        run: |
+          source access_token.sh
+          node runScrapers.js
