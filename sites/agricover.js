@@ -65,7 +65,7 @@ const run = async () => {
   const logo =
     "https://agricover.ro/Files/Images/AgricoverCorporate/logo/svg/logo-positive.svg";
   const jobs = await getJobs();
-  const params = getParams(company, logo, "laurentiumarianbaluta@gmail.com");
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
