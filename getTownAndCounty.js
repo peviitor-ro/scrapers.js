@@ -16,7 +16,6 @@ class Counties {
 
   async getCounties(city) {
     for (const county of this.#getCounties()) {
-      console.log(county.city);
       if (county.city.toLowerCase() === removeDiacritics(city.toLowerCase())) {
         return county;
       }
