@@ -58,12 +58,3 @@ module.exports = {
   Counties,
 };
 
-// (async () => {
-//   const counties = new Counties();
-//   let county = await counties.getCounties("Iasi");
-//   console.log(county);
-//   county = await counties.getCounties("Bucuresti");
-//   console.log(county);
-//   county = await counties.getCounties("Iași");
-//   console.log(county);
-// })();

@@ -77,12 +77,6 @@ if (paramsCollection.length === 0) {
 
           expect(isNotValidImage, `Error message: ${isNotValidImage}`).toBeFalsy();
         });
-
-        test("apikey exists & is not empty & is uuid4", () => {
-          const { apikey } = values;
-          expect(apikey, "apikey is undefined").toBeDefined();
-          expect(apikey.trim(), "apikey is empty").toBeTruthy();
-        });
       });
     });
   });

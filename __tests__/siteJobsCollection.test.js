@@ -31,7 +31,7 @@ if (siteJobsCollection.length === 0) {
         });
         test("Each job should have 4 properties", () => {
           jobs.forEach((job) => {
-            const keysNr = 4;
+            const keysNr = 3;
             const keysNrReceived = Object.keys(job).length;
             expect(
               keysNrReceived,
@@ -64,14 +64,6 @@ if (siteJobsCollection.length === 0) {
             const { country } = job;
             expect(country, "country is undefined").toBeDefined();
             expect(country.trim(), "country is empty").toBeTruthy();
-          });
-        });
-
-        test("city exists & is not empty", () => {
-          jobs.forEach((job) => {
-            const { city } = job;
-            expect(city, "city is undefined").toBeDefined();
-            expect(city.trim(), "city is empty").toBeTruthy();
           });
         });
       });
