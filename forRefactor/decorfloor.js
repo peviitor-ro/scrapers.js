@@ -1,11 +1,17 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
+
+const _counties = new Counties();
 
 const getAditionalCity = async (url) => {
-  const s = new scraper.Scraper(url);
-  const soup = await s.get_soup();
+  const scraper = new Scraper(url);
+  const soup = await scraper.get_soup("HTML");
 
   let location;
 
@@ -20,60 +26,63 @@ const getAditionalCity = async (url) => {
     location = "Unknown";
   }
 
-  const { foudedTown, county } = getTownAndCounty(
-    translate_city(location.trim().toLowerCase())
+  let cities = [];
+  let counties = [];
+
+  const { city: c, county: co } = await _counties.getCounties(
+    translate_city(location.trim())
   );
-  return { foudedTown, county };
+
+  if (c) {
+    cities.push(c);
+    counties = [...new Set([...counties, ...co])];
+  }
+
+  return { city: cities, county: counties }
 };
-const url = "https://decorfloor.ro/careers/";
 
-const company = { company: "Decorfloor" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url = "https://decorfloor.ro/careers/";
 
-const s = new scraper.Scraper(url);
+  const scraper = new Scraper(url);
+  const jobs = [];
 
-s.soup
-  .then(async (soup) => {
-    const jobs = soup.findAll("div", { class: "vc_gitem-col" });
-    await Promise.all(
-      jobs.map(async (job) => {
-        const job_title = job.find("h4").text.trim();
-        const job_link = job.find("a").attrs.href;
+  const soup = await scraper.get_soup("HTML");
 
-        const { foudedTown, county } = await getAditionalCity(job_link);
+  const jobsElements = soup.findAll("div", { class: "vc_gitem-col" });
 
-        if (foudedTown && county) {
-          finalJobs.push({
-            job_title: job_title,
-            job_link: job_link,
-            city: foudedTown,
-            county: county,
-            country: "Romania",
-            company: company.company,
-          });
-        } else {
-          finalJobs.push({
-            job_title: job_title,
-            job_link: job_link,
-            city: ["Bucuresti", "Cluj-Napoca"],
-            county: ["Bucuresti", "Cluj"],
-            country: "Romania",
-            company: company.company,
-          });
-        }
-      })
-    );
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
+  await Promise.all(
+    jobsElements.map(async (elem) => {
+      const job_title = elem.find("h4").text.trim();
+      const job_link = elem.find("a").attrs.href;
+      
+      let cities = [];
+      let counties = [];
 
-    scraper.postApiPeViitor(finalJobs, company);
+      const { city: c, county: co } = await getAditionalCity(job_link);
 
-    let logo = "https://decorfloor.ro/wp-content/uploads/2015/08/logo.png";
+      if (c) {
+        cities.push(...c);
+        counties = [...new Set([...counties, ...co])];
+      }
 
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
+      const job = generateJob(job_title, job_link, "Romania", cities, counties);
+      jobs.push(job);
+    })
+  );
+  return jobs;
+};
+
+const run = async () => {
+  const company = "Decorfloor";
+  const logo = "https://decorfloor.ro/wp-content/uploads/2015/08/logo.png";
+  const jobs = await getJobs();
+  const params = getParams(company, logo);
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
