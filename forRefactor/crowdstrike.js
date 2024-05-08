@@ -1,15 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city, get_jobtype } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county, remote) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-  remote,
-});
+const _counties = new Counties();
 
 const getAditionalCity = async (url) => {
   const scraper = new Scraper(url);
@@ -21,16 +19,18 @@ const getAditionalCity = async (url) => {
   if (cities) {
     for (let i = 0; i < cities.length; i++) {
       const splits = cities[i].split("-");
-      let city = translate_city(splits[splits.length - 1].trim().toLowerCase());
-      const { foudedTown, county } = getTownAndCounty(city);
-      return {
-        foudedTown: foudedTown ? foudedTown : "",
-        county: county ? county : "",
-        remote: remote,
-      };
+      let city = translate_city(splits[splits.length - 1].trim());
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        return {
+          city: c,
+          county: co,
+          remote,
+        };
+      }
     }
   }
-  return { foudedTown: "", county: "", remote };
+  return { city: "", county: "", remote };
 };
 
 const getJobs = async () => {
@@ -68,21 +68,23 @@ const getJobs = async () => {
         const job_link = job_link_prefix + externalPath;
         const remote = get_jobtype(locationsText.toLowerCase());
         const separatorIndex = locationsText.indexOf(" ");
-        const city = translate_city(locationsText.substring(0, separatorIndex));
+        const location = translate_city(
+          locationsText.substring(0, separatorIndex)
+        );
 
-        const job = generateJob(title, job_link, "", "", remote);
-        const { foudedTown, county } = getTownAndCounty(city);
+        const job = generateJob(title, job_link, "Romania", "", "", remote);
+        const { city, county } = await _counties.getCounties(location);
 
-        if (foudedTown && county) {
-          job.city = foudedTown;
-          job.county = county;
+        if (city && county) {
+          job.city = city ? [city] : [];
+          job.county = county ? [county] : [];
         } else {
           const jobName = externalPath.split("/");
           const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
             jobName[jobName.length - 1]
           }`;
-          const { foudedTown, county, remote } = await getAditionalCity(url);
-          job.city = foudedTown;
+          const { city, county, remote } = await getAditionalCity(url);
+          job.city = city;
           job.county = county;
           job.remote = remote;
         }
@@ -93,22 +95,12 @@ const getJobs = async () => {
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "CrowdStrike";
   const logo =
     "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
-  const apikey = "process.env.APIKEY";
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 

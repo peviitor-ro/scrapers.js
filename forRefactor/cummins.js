@@ -1,18 +1,17 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city } = require("../utils.js");
+const { translate_city, get_jobtype } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, country, county, city) => ({
-  job_title,
-  job_link,
-  country,
-  county,
-  city,
-  remote: [],
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://cummins.jobs/rom/jobs/?offset=10&num_items=100&filter_path=%2Fjobs%2F";
+  const url =
+    "https://cummins.jobs/rom/jobs/?offset=10&num_items=100&filter_path=%2Fjobs%2F";
   const scraper = new Scraper(url);
   const jobs = [];
 
@@ -20,40 +19,40 @@ const getJobs = async () => {
 
   const jobsElements = soup.findAll("li", { class: "direct_joblisting" });
 
-  jobsElements.forEach((job) => {
-    const job_title = job.find("a").text.trim();
-    const job_link = "https://cummins.jobs" + job.find("a").attrs.href;
-    const city = job
-      .find("span", { class: "hiringPlace" })
-      .text.split(",")[0]
-      .trim().split(" ")
+  await Promise.all(
+    jobsElements.map(async (elem) => {
+      const job_title = elem.find("a").text.trim();
+      const job_link = "https://cummins.jobs" + elem.find("a").attrs.href;
+      const city = elem
+        .find("span", { class: "hiringPlace" })
+        .text.split(",")[0]
+        .trim()
+        .split(" ");
 
-      if (city.length > 1) {
-        jobs.push(generateJob(job_title, job_link, "Romania", city[0], city[1]));
-      } else {
-        const { foudedTown, county } = getTownAndCounty(translate_city(city[0].toLowerCase()));
-        jobs.push(generateJob(job_title, job_link, "Romania", county, foudedTown));
+      let cities = [];
+      let counties = [];
+
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city[1])
+      );
+
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
       }
-  });
 
+      const job = generateJob(job_title, job_link, "Romania", cities, counties);
+      jobs.push(job);
+    })
+  );
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Cummins";
   const logo = "https://dn9tckvz2rpxv.cloudfront.net/cummins/img4/logo.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
