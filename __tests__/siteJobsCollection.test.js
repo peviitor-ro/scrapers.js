@@ -31,7 +31,7 @@ if (siteJobsCollection.length === 0) {
         });
         test("Each job should have 4 properties", () => {
           jobs.forEach((job) => {
-            const keysNr = 3;
+            const keysNr = 6;
             const keysNrReceived = Object.keys(job).length;
             expect(
               keysNrReceived,
