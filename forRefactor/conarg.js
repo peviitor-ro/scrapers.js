@@ -1,12 +1,9 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-
-const generateJob = (job_title, job_link, country, county, city) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  county: "Bucuresti",
-  city: "Bucuresti",
-});
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
 
 const getJobs = async () => {
   const url = "https://www.conarg.co/ro/cariere/oportunitati-de-cariera.html";
@@ -18,31 +15,23 @@ const getJobs = async () => {
     .find("article", { class: "wk-content" })
     .findAll("li");
 
-  jobsElements.forEach((job) => {
-    const job_title = job.find("h2").text.trim();
-    const job_link = "https://www.conarg.co" + job.find("a").attrs.href;
-
-    jobs.push(generateJob(job_title, job_link));
+  jobsElements.forEach((elem) => {
+    const job_title = elem.find("h2").text.trim();
+    const job_link = "https://www.conarg.co" + elem.find("a").attrs.href;
+    const city = "Bucuresti";
+    const county = "Bucuresti";
+    const job = generateJob(job_title, job_link, "Romania", city, county);
+    jobs.push(job);
   });
 
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Conarg";
   const logo = "http://www.conarg.co/images/logo/logo.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 

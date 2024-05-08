@@ -1,13 +1,9 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-
-const generateJob = (job_title, job_link) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  county: ["Maramures", "București", "Cluj", "Iași", "Timiș"],
-  city: ["Baia Mare", "București", "Cluj-Napoca", "Iași", "Timișoara"],
-  remote: ["Remote", "Hybrid"],
-});
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
 
 const getJobs = async () => {
   const url =
@@ -22,33 +18,40 @@ const getJobs = async () => {
     res.find("script", { type: "application/json" }).text
   );
 
-  json.props.pageProps.jobOpenings.jobs.forEach((job) => {
-    if (job.location == "Romania") {
-      const job_title = job.title;
-      const job_link = "https://www.cognizantsoftvision.com" + job.link;
-      jobs.push(generateJob(job_title, job_link));
+  json.props.pageProps.jobOpenings.jobs.forEach((elem) => {
+    if (elem.location == "Romania") {
+      const job_title = elem.title;
+      const job_link = "https://www.cognizantsoftvision.com" + elem.link;
+      const cities = [
+        "Baia Mare",
+        "Bucuresti",
+        "Cluj-Napoca",
+        "Iasi",
+        "Timisoara",
+      ];
+      const counties = ["Maramures", "Bucuresti", "Cluj", "Iasi", "Timis"];
+      const remote = ["Remote", "Hybrid"];
+
+      const job = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        cities,
+        counties,
+        remote
+      );
+      jobs.push(job);
     }
   });
-
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "CognizantSoftvision";
   const logo =
     "https://www.cognizantsoftvision.com/react-images/logos/logo-header.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
@@ -57,3 +60,4 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+
