@@ -1,4 +1,4 @@
-const { translate_city, get_jobtype } = require("../utils.js");
+const { translate_city } = require("../utils.js");
 const {
   Scraper,
   postApiPeViitor,

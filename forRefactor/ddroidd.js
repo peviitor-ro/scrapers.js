@@ -1,50 +1,69 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const url =
-  "https://api.storyblok.com/v2/cdn/stories/?version=published&starts_with=vacancies%2F&&&excluding_ids=-1&token=4pOFw3LnvRlerPVVh0AB1Qtt&cv=undefined";
+const _counties = new Counties();
 
-const company = { company: "DDroidd" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url =
+    "https://api.storyblok.com/v2/cdn/stories/?version=published&starts_with=vacancies%2F&&&excluding_ids=-1&token=4pOFw3LnvRlerPVVh0AB1Qtt&cv=undefined";
 
-const s = new scraper.ApiScraper(url);
+  const jobs = [];
+  const scraper = new Scraper(url);
+  const type = "JSON";
+  const res = await scraper.get_soup(type);
+  const json = res.stories;
 
-s.get()
-  .then((response) => {
-    const jobs = response.stories;
-
-    jobs.forEach((job) => {
-      const job_title = job.name;
-      const job_link = "https://www.ddroidd.com/" + job.full_slug;
-      const remote = job.content.type.toLowerCase().includes("remote")
+  await Promise.all(
+    json.map(async (item) => {
+      const job_title = item.name;
+      const job_link = "https://www.ddroidd.com/" + item.full_slug;
+      const remote = item.content.type.toLowerCase().includes("remote")
         ? ["Remote"]
         : [];
-      let city = "";
-      let county = "";
 
-      const obj = getTownAndCounty(
-        translate_city(job.content.location.toLowerCase())
+      let cities = [];
+      let counties = [];
+
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(item.content.location)
       );
 
-      if (obj.foudedTown && obj.county) {
-        city = obj.foudedTown;
-        county = obj.county;
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
       }
 
-      finalJobs.push({
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        city: city,
-        county: county,
-        country: "Romania",
-        remote: remote,
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
-    scraper.postApiPeViitor(finalJobs, company);
-  });
+      const job = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        cities,
+        counties,
+        remote
+      );
+      jobs.push(job);
+    })
+  );
+  return jobs;
+};
+
+const run = async () => {
+  const company = "DDroidd";
+  const logo = "https://www.ddroidd.com/img/header-logo.svg";
+  const jobs = await getJobs();
+  const params = getParams(company, logo);
+  postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+

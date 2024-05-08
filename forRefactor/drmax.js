@@ -1,15 +1,13 @@
-/* eslint-disable no-plusplus */
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   const jobs = [];
@@ -38,57 +36,53 @@ const getJobs = async () => {
     for (let i = 0; i < soupElements.length; i++) {
       soupElements[i].append(soupElements2[i]);
     }
-    soupElements.forEach((el) => {
-      const job_title = el.find("a").text;
-      const job_link = el.find("a").attrs.href;
-      let cities_elements = el.findAll("span", {
-        class: "awsm-job-specification-term",
-      });
 
-      const cities = [];
-      const counties = [];
+    await Promise.all(
+      soupElements.map(async (el) => {
+        const job_title = el.find("a").text;
+        const job_link = el.find("a").attrs.href;
+        let cities_elements = el.findAll("span", {
+          class: "awsm-job-specification-term",
+        });
 
-      cities_elements.forEach((city) => {
-        if (city.text.includes("Sediul central")) {
-          city = "Mogosoaia";
-        } else if (city.text.includes("Drobeta Turnu Severin")) {
-          city = "Drobeta-Turnu Severin";
-        } else {
-          city = translate_city(city.text);
-        }
+        let cities = [];
+        let counties = [];
 
-        const { foudedTown, county } = getTownAndCounty(city);
+        await Promise.all(
+          cities_elements.map(async (city) => {
+            const city_element = city.text;
+            const { city: c, county: co } = await _counties.getCounties(
+              translate_city(city_element)
+            );
+            if (c) {
+              cities.push(c);
+              counties = [...new Set([...counties, ...co])];
+            }
+          })
+        );
 
-        cities.push(foudedTown);
-        if (!counties.includes(county)) {
-          counties.push(county);
-        }
-      });
-
-      const job = generateJob(job_title, job_link, cities, counties);
-      jobs.push(job);
-    });
+        const job = generateJob(
+          job_title,
+          job_link,
+          "Romania",
+          cities,
+          counties
+        );
+        jobs.push(job);
+      })
+    );
   }
+  console.log(jobs);
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "drmax";
   const logo =
     "https://drmaxromania.com/wp-content/uploads/2023/03/drmaxromania-logo-768x136.png";
-  const apikey = process.env.KNOX;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
-  const jobss = await getJobs();
-  const params = getParams();
-  await postApiPeViitor(jobss, params);
+  const jobs = await getJobs();
+  const params = getParams(company, logo);
+  postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {

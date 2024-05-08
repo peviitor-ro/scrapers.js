@@ -42,7 +42,7 @@ const getJobs = async () => {
         remote.push("Remote");
         job_obj.remote = remote;
       } else {
-        const { city: c, county: co } = await _counties.getCounties(city);
+        const { city: c, county: co } = await _counties.getCounties(translate_city(city));
         if (c) {
           job_obj.city = c;
           job_obj.county = co;
