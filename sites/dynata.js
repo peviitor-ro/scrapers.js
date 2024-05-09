@@ -1,6 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
+
+const _counties = new Counties();
 
 const getAditionalCity = async (url) => {
   const scraper = new Scraper(url);
@@ -10,32 +17,28 @@ const getAditionalCity = async (url) => {
     ...res.jobPostingInfo.additionalLocations,
     res.jobPostingInfo.location,
   ];
-  const citys = [];
-  const countys = [];
-  const remote = res.jobPostingInfo.remoteType === "Fully Remote" ? ["Remote"] : [];
+  let cities = [];
+  let counties = [];
 
-  for (let city of citys_elements) {
-    const { foudedTown, county } = getTownAndCounty(
-      translate_city(city.split("(")[1].replace(")", "").trim().toLowerCase())
+  const remote =
+    res.jobPostingInfo.remoteType === "Fully Remote" ? ["Remote"] : [];
+
+    await Promise.all(
+      citys_elements.map(async (elem) => {
+        const separatorIndex = elem.indexOf("(");
+        let city = elem.substring(separatorIndex + 1).replace(")", "");
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(city)
+        );
+        if (c) {
+          cities.push(c);
+          counties = [...new Set([...counties, ...co])];
+        }
+      })
     );
 
-    if (foudedTown && county) {
-      citys.push(foudedTown);
-      countys.push(county);
-    }
-  }
-
-  return { citys, countys, remote };
+  return { cities, counties, remote };
 };
-
-const generateJob = (job_title, job_link, city, county, remote = []) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-  remote,
-});
 
 const getJobs = async () => {
   const url =
@@ -84,44 +87,35 @@ const getJobs = async () => {
         const separatorIndex = locationsText.indexOf("(");
         let city = locationsText.substring(separatorIndex + 1).replace(")", "");
 
-        const { foudedTown, county } = getTownAndCounty(
-          translate_city(city.trim().toLowerCase())
-        );
+        const {
+          city: c,
+          county: co,
+        
+        } = await _counties.getCounties(translate_city(city));
 
-        if (foudedTown && county) {
-          jobs.push(generateJob(title, job_link, foudedTown, county));
+        if (c) {
+          jobs.push(generateJob(title, job_link, "Romania", c, co));
         } else {
           const jobName = externalPath.split("/")[3];
           const url = `https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/job/${jobName}`;
-          const { citys, countys, remote } = await getAditionalCity(url);
+          const { cities, counties, remote } = await getAditionalCity(url);
 
-          jobs.push(generateJob(title, job_link, citys, countys, remote));
+          jobs.push(generateJob(title, job_link, "Romania", cities, counties, remote));
         }
       })
     );
     data.offset = i * limit;
     soup = await scraper.post(data);
   }
-
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Dynata";
   const logo =
     "https://www.dynata.com/wp-content/themes/dynata/images/dynata-logo.png";
-  const apikey = process.env.KNOX;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams( company, logo);
   postApiPeViitor(jobs, params);
 };
 

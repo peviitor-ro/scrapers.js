@@ -1,15 +1,14 @@
-const { Scraper, postApiPeViitor, range } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city } = require("../utils.js");
+const { translate_city, get_jobtype } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+  range,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county, remote) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-  remote,
-});
+const _counties = new Counties();
 
 const get_job_type = async (url) => {
   const scraper = new Scraper(url);
@@ -19,7 +18,7 @@ const get_job_type = async (url) => {
     .find("div", { class: "job" })
     .findAll("span", { class: "rtltextaligneligible" })[2]
     .text.trim();
-  const job_type = job_type_elem.includes("Remote") ? ["Remote"] : [];
+  const job_type = get_jobtype(job_type_elem.toLowerCase());
 
   return job_type;
 };
@@ -35,6 +34,7 @@ const getJobs = async () => {
   const total_jobs = parseInt(
     res.find("span", { class: "paginationLabel" }).findAll("b")[1].text
   );
+
   const rows = range(0, total_jobs, step);
 
   for (let i = 0; i < rows.length; i++) {
@@ -44,31 +44,34 @@ const getJobs = async () => {
       .findAll("tr");
 
     await Promise.all(
-      jobsElements.map(async (job) => {
-        const job_title = job.find("a").text;
-        const job_link = "https://careers.ey.com" + job.find("a").attrs.href;
-        const { foudedTown, county } = getTownAndCounty(
-          translate_city(
-            job
-              .find("span", { class: "jobLocation" })
-              .text.split(",")[0]
-              .toLowerCase()
-              .trim()
-          )
-        );
+      jobsElements.map(async (elem) => {
+        const job_title = elem.find("a").text;
+        const job_link = "https://careers.ey.com" + elem.find("a").attrs.href;
+        const location = elem
+          .find("span", { class: "jobLocation" })
+          .text.split(",")[0]
+          .trim();
+        let cities = [];
+        let counties = [];
         const job_type = await get_job_type(job_link);
 
-        if (foudedTown && county) {
-          jobs.push(
-            generateJob(job_title, job_link, foudedTown, county, job_type)
-          );
-        } else {
-          let city = job
-            .find("span", { class: "jobLocation" })
-            .text.split(",")[0]
-            .trim();
-          jobs.push(generateJob(job_title, job_link, city, "", job_type));
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(location)
+        );
+
+        if (c) {
+          cities.push(c);
+          counties = [...new Set([...counties, ...co])];
         }
+        const job = generateJob(
+          job_title,
+          job_link,
+          "Romania",
+          cities,
+          counties,
+          job_type
+        );
+        jobs.push(job);
       })
     );
 
@@ -76,27 +79,15 @@ const getJobs = async () => {
     scraper.url = url;
     res = await scraper.get_soup("HTML");
   }
-
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "EY";
   const logo =
     "https://rmkcdn.successfactors.com/bcfdbc8a/688bb7d2-e818-494b-967e-0.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
