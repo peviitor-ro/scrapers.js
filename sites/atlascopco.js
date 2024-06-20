@@ -18,23 +18,21 @@ const getJobs = async () => {
   const json = res.jobs;
   const jobs = [];
 
-  await Promise.all(
-    json.map(async (item) => {
-      let cities = [];
-      let counties = [];
-      const job_title = item.Title;
-      const job_link = "https://www.atlascopco.com" + item.path;
-      const country = "Romania";
-      const city = translate_city(item.Cities);
-      const { city: c, county: co } = await _counties.getCounties(city);
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
+  for (const item of json) {
+    let cities = [];
+    let counties = [];
+    const job_title = item.Title;
+    const job_link = "https://www.atlascopco.com" + item.path;
+    const country = "Romania";
+    const city = translate_city(item.Cities);
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
   return jobs;
 };
 

@@ -17,45 +17,33 @@ const getJobs = async () => {
 
   const jobs = [];
 
-  await Promise.all(
-    items.map(async (item) => {
-      let cities = [];
-      let counties = [];
-      const job_title = item.find("h3").text.trim();
-      const job_link = "https://agricover.ro" + item.find("a").attrs.href;
-      const country = "Romania";
-      const locations = item.find("h5").text.split(" ");
+  for (const item of items) {
+    let cities = [];
+    let counties = [];
+    const job_title = item.find("h3").text.trim();
+    const job_link = "https://agricover.ro" + item.find("a").attrs.href;
+    const country = "Romania";
+    const locations = item.find("h5").text.split(" ");
 
-      const locationPromises = locations.map(async (c) => {
-        const replacedChars = [
-          "(",
-          ")",
-          ",",
-          ".",
-          "/",
-          "Oras:",
-          "Regiunea",
-          "-",
-        ];
-        replacedChars.forEach((char) => {
-          c = c.replace(char, "");
-        });
-
-        if (c !== "") {
-          const { city, county } = await _counties.getCounties(c);
-          if (city) {
-            cities.push(city);
-            counties = [...new Set([...counties, ...county])];
-          }
-        }
+    for (let i = 0; i < locations.length; i++) {
+      let c = locations[i];
+      const replacedChars = ["(", ")", ",", ".", "/", "Oras:", "Regiunea", "-"];
+      replacedChars.forEach((char) => {
+        c = c.replace(char, "");
       });
 
-      await Promise.all(locationPromises);
+      if (c !== "") {
+        const { city, county } = await _counties.getCounties(c);
+        if (city) {
+          cities.push(city);
+          counties = [...new Set([...counties, ...county])];
+        }
+      }
+    }
 
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
 
   return jobs;
 };

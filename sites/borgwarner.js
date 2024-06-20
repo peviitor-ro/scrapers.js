@@ -19,42 +19,33 @@ const getJobs = async () => {
 
   const elements = res.findAll("div", { class: "widget-block" });
 
-  await Promise.all(
-    elements.map(async (elem) => {
-      try {
-        const job_title = elem
-          .find("span", { class: "bw-global-list-h3" })
-          .text.trim();
-        const job_link = elem
-          .find("a", { class: "link" })
-          .attrs.href.replace(/&amp;/g, "&");
-        const city = translate_city(
-          elem
-            .find("p", { class: "bw-global-list-p" })
-            .text.split("-")[0]
-            .trim()
-        );
+  for (const elem of elements) {
+    try {
+      const job_title = elem
+        .find("span", { class: "bw-global-list-h3" })
+        .text.trim();
+      const job_link = elem
+        .find("a", { class: "link" })
+        .attrs.href.replace(/&amp;/g, "&");
+      const city = translate_city(
+        elem.find("p", { class: "bw-global-list-p" }).text.split("-")[0].trim()
+      );
 
-        let cities = [];
-        let counties = [];
+      let cities = [];
 
-        const { city: c, county: co } = await _counties.getCounties(city);
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
+      let counties = [];
 
-        const job = generateJob(
-          job_title,
-          job_link,
-          "Romania",
-          cities,
-          counties
-        );
-        jobs.push(job);
-      } catch (error) {}
-    })
-  );
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job = generateJob(job_title, job_link, "Romania", cities, counties);
+
+      jobs.push(job);
+    } catch (error) {}
+  }
   return jobs;
 };
 

@@ -34,36 +34,36 @@ const getJobs = async () => {
   };
 
   const elements = await fetchPages();
-  await Promise.all(
-    elements.map(async (job) => {
-      const job_title = job.name;
-      const job_link = job.canonicalPositionUrl;
-      let city;
-      let county;
-      const locations = job.locations;
-      for (const location of locations) {
-        if (location.includes("Romania") || location.includes("ROU")) {
-          try {
-            city = location.split(",")[0];
-            const obj = await _counties.getCounties(
-              translate_city(city.trim())
-            );
-            city = obj.city;
-            county = obj.county;
-          } catch (error) {
-            city = location;
-            const obj = await _counties.getCounties(
-              translate_city(city.trim())
-            );
-            city = obj.city;
-            county = obj.county;
-          }
+
+  for (const job of elements) {
+    const job_title = job.name;
+    const job_link = job.canonicalPositionUrl;
+    let city;
+    let county;
+    const locations = job.locations;
+    for (const location of locations) {
+      if (location.includes("Romania") || location.includes("ROU")) {
+        try {
+          city = location.split(",")[0];
+          const obj = await _counties.getCounties(
+            translate_city(city.trim())
+          );
+          city = obj.city;
+          county = obj.county;
+        } catch (error) {
+          city = location;
+          const obj = await _counties.getCounties(
+            translate_city(city.trim())
+          );
+          city = obj.city;
+          county = obj.county;
         }
       }
+    }
 
-      jobs.push(generateJob(job_title, job_link, "Romania", city, county));
-    })
-  );
+    jobs.push(generateJob(job_title, job_link, "Romania", city, county));
+  }
+
   return jobs;
 };
 

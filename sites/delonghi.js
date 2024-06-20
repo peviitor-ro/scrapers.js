@@ -44,39 +44,36 @@ const getJobs = async () => {
   const soup = new Jssoup(res[2].data);
   const elements = soup.findAll("div", { class: "views-row" });
 
-  await Promise.all(
-    elements.map(async (elem) => {
-      const job_title = elem.find("h3").text;
-      const job_link =
-        "https://www.delonghigroup.com" + elem.find("a").attrs.href;
-      const job_location = elem.find("div", {
-        class: "job-country-location",
-      }).text;
-      let city_element = translate_city(job_location.split(",")[1].trim());
-      const job_country = job_location.split(",");
+  for (const elem of elements) {
+    const job_title = elem.find("h3").text;
+    const job_link =
+      "https://www.delonghigroup.com" + elem.find("a").attrs.href;
+    const job_location = elem.find("div", {
+      class: "job-country-location",
+    }).text;
+    let city_element = translate_city(job_location.split(",")[1].trim());
+    const job_country = job_location.split(",");
+    let country;
+    if (job_country[0] === "CEE") {
+      country = job_country[2].trim();
+    } else {
+      country = job_country[0].split(" ")[0].trim();
+    }
 
-      let country;
-      if (job_country[0] === "CEE") {
-        country = job_country[2].trim();
-      } else {
-        country = job_country[0].split(" ")[0].trim();
+    let cities = [];
+    let counties = [];
+
+    if (country === "Romania") {
+      const { city: c, county: co } = await _counties.getCounties(city_element);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
       }
+      const job = generateJob(job_title, job_link, country, cities, counties);
+      jobs.push(job);
+    }
+  }
 
-      let cities = [];
-      let counties = [];
-
-      if (country === "Romania") {
-        const { city: c, county: co } =
-          await _counties.getCounties(city_element);
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
-        const job = generateJob(job_title, job_link, country, cities, counties);
-        jobs.push(job);
-      }
-    })
-  );
   return jobs;
 };
 
@@ -94,4 +91,3 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
-

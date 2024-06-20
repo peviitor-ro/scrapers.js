@@ -19,37 +19,36 @@ const getJobs = async () => {
   const res = await scraper.get_soup(type);
   const json = res.stories;
 
-  await Promise.all(
-    json.map(async (item) => {
-      const job_title = item.name;
-      const job_link = "https://www.ddroidd.com/" + item.full_slug;
-      const remote = item.content.type.toLowerCase().includes("remote")
-        ? ["Remote"]
-        : [];
+  for (const item of json) {
+    const job_title = item.name;
+    const job_link = "https://www.ddroidd.com/" + item.full_slug;
+    const remote = item.content.type.toLowerCase().includes("remote")
+      ? ["Remote"]
+      : [];
 
-      let cities = [];
-      let counties = [];
+    let cities = [];
+    let counties = [];
 
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(item.content.location)
-      );
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(item.content.location)
+    );
 
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        cities,
-        counties,
-        remote
-      );
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      cities,
+      counties,
+      remote
+    );
+    jobs.push(job);
+  }
+
   return jobs;
 };
 
@@ -66,4 +65,3 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
-

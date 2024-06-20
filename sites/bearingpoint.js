@@ -17,49 +17,45 @@ const getJobs = async () => {
   const res = await scraper.get_soup(type);
   const elements = res.find("div", { class: "hh-jobs-openings" }).findAll("a");
 
-  await Promise.all(
-    elements.map(async (item) => {
-      const job_title = item.find("h3").text.trim();
-      const job_link =
-        "https://bearingpoint-romania.hirehive.com" + item.attrs.href;
-      let remote = [];
-      const locations = item
-        .find("div", { class: "hh-job-row-location" })
-        .text.replace("and", ",")
-        .trim()
-        .split(",");
+  for (const item of elements) {
+    const job_title = item.find("h3").text.trim();
+    const job_link =
+      "https://bearingpoint-romania.hirehive.com" + item.attrs.href;
+    let remote = [];
+    const locations = item
+      .find("div", { class: "hh-job-row-location" })
+      .text.replace("and", ",")
+      .trim()
+      .split(",");
 
-      const country = "Romania";
-      const cities = [];
-      let counties = [];
+    const country = "Romania";
+    const cities = [];
+    let counties = [];
 
-      await Promise.all(
-        locations.map(async (location) => {
-          const city = translate_city(location.trim());
-          const { city: c, county: co } = await _counties.getCounties(city);
-          if (c) {
-            cities.push(c);
-            counties = [...new Set([...counties, ...co])];
-          }
-        })
-      );
+    for (const location of locations) {
+      const city = translate_city(location.trim());
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+    }
 
-      try {
-        const remoteElement = locations[0].toLowerCase().trim();
-        remote = get_jobtype(remoteElement);
-      } catch (error) {}
+    try {
+      const remoteElement = locations[0].toLowerCase().trim();
+      remote = get_jobtype(remoteElement);
+    } catch (error) {}
 
-      const job = generateJob(
-        job_title,
-        job_link,
-        country,
-        cities,
-        counties,
-        remote
-      );
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(
+      job_title,
+      job_link,
+      country,
+      cities,
+      counties,
+      remote
+    );
+    jobs.push(job);
+  }
   return jobs;
 };
 

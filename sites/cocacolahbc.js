@@ -3,7 +3,7 @@ const {
   Scraper,
   postApiPeViitor,
   generateJob,
-  getParams
+  getParams,
 } = require("peviitor_jsscraper");
 const { Counties } = require("../getTownAndCounty.js");
 
@@ -18,40 +18,39 @@ const getJobs = async () => {
   const res = await scraper.get_soup("HTML");
   const jobObject = res.findAll("div", { class: "article__header__text" });
 
-  await Promise.all(
-    jobObject.map(async (elem) => {
-      const job_title = elem.find("a").text.trim();
-      const job_link = elem.find("a").attrs.href;
-      const cityArray =
-        elem
-          .find("span", { class: "list-item" })
-          ?.text.trim()
-          .match(/\((.*?)\)/) || [];
+  for (const elem of jobObject) {
+    const job_title = elem.find("a").text.trim();
+    const job_link = elem.find("a").attrs.href;
+    const cityArray =
+      elem
+        .find("span", { class: "list-item" })
+        ?.text.trim()
+        .match(/\((.*?)\)/) || [];
 
-      let cities = [];
-      let counties = [];
-      let remote = [];
+    let cities = [];
+    let counties = [];
+    let remote = [];
 
-      if (cityArray && cityArray.length >= 2) {
-        const city = translate_city(cityArray[1].replace("-", " "));
-        const { city: c, county: co } = await _counties.getCounties(city);
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
+    if (cityArray && cityArray.length >= 2) {
+      const city = translate_city(cityArray[1].replace("-", " "));
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
       }
+    }
 
-      const job = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        cities,
-        counties,
-        remote
-      );
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      cities,
+      counties,
+      remote
+    );
+    jobs.push(job);
+  }
+
   return jobs;
 };
 
@@ -68,4 +67,3 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
-

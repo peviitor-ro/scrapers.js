@@ -22,45 +22,37 @@ const getJobs = async () => {
   const pattern = /Locatii: (.*)./g;
 
   while (items.length > 0) {
-    await Promise.all(
-      items.map(async (item) => {
-        const job_title = item.find("h2").text.trim();
-        const job_link = item.find("a").attrs.href;
-        let cities = [];
-        let counties = [];
+    for (const item of items) {
+      const job_title = item.find("h2").text.trim();
+      const job_link = item.find("a").attrs.href;
+      let cities = [];
+      let counties = [];
 
-        const sentence = item
-          .findAll("p")
-          [item.findAll("p").length - 1].text.trim();
-        const matches = sentence.match(pattern);
-        if (matches) {
-          await Promise.all(
-            matches.map(async (match) => {
-              const citys_elem = match.split(":")[1].split(",");
-              await Promise.all(
-                citys_elem.map(async (city) => {
-                  let edited_city = replace_char(
-                    city,
-                    ["(", ")", "."],
-                    ""
-                  ).replace("Ghiroda", "");
-                  const { city: c, county: co } = await _counties.getCounties(
-                    translate_city(edited_city.trim())
-                  );
-                  if (c) {
-                    cities.push(c);
-                    counties = [...new Set([...counties, ...co])];
-                  }
-                })
-              );
-            })
-          );
+      const sentence = item
+        .findAll("p")
+        [item.findAll("p").length - 1].text.trim();
+      const matches = sentence.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const citys_elem = match.split(":")[1].split(",");
+          for (const city of citys_elem) {
+            let edited_city = replace_char(city, ["(", ")", "."], "").replace(
+              "Ghiroda",
+              ""
+            );
+            const { city: c, county: co } = await _counties.getCounties(
+              translate_city(edited_city.trim())
+            );
+            if (c) {
+              cities.push(c);
+              counties = [...new Set([...counties, ...co])];
+            }
+          }
         }
-        jobs.push(
-          generateJob(job_title, job_link, "Romania", cities, counties)
-        );
-      })
-    );
+      }
+      jobs.push(generateJob(job_title, job_link, "Romania", cities, counties));
+    }
+
     page++;
     scraper.url =
       "https://ro.brinks.com/ro/careers/career-positions?p_p_id=com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomDateRangeFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomAttributesFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomCategoryFilter=false&p_r_p_resetCur=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_cur=" +

@@ -25,41 +25,37 @@ const getJobs = async () => {
   const items = [];
 
   if (totalJobs > step) {
-    await Promise.all(
-      pages.map(async (page) => {
-        const url = `https://jobsearch.alstom.com/search/?q=&locationsearch=Romania&startrow=${page}`;
-        const scraper = new Scraper(url);
-        const res = await scraper.get_soup("HTML");
-        items.push(...res.find("tbody").findAll("tr"));
-      })
-    );
+    for (const page of pages) {
+      const url = `https://jobsearch.alstom.com/search/?q=&locationsearch=Romania&startrow=${page}`;
+      const scraper = new Scraper(url);
+      const res = await scraper.get_soup("HTML");
+      items.push(...res.find("tbody").findAll("tr"));
+    }
   } else {
     items.push(...res.find("tbody").findAll("tr"));
   }
 
   const jobs = [];
 
-  await Promise.all(
-    items.map(async (item) => {
-      let cities = [];
-      let counties = [];
-      const job_title = item.find("a").text.trim();
-      const job_link = "https://jobsearch.alstom.com" + item.find("a").attrs.href;
-      const country = "Romania";
-      const city = translate_city(
-        item.find("span", { class: "jobLocation" }).text.split(",")[0].trim()
-      );
+  for (const item of items) {
+    let cities = [];
+    let counties = [];
+    const job_title = item.find("a").text.trim();
+    const job_link = "https://jobsearch.alstom.com" + item.find("a").attrs.href;
+    const country = "Romania";
+    const city = translate_city(
+      item.find("span", { class: "jobLocation" }).text.split(",")[0].trim()
+    );
 
-      const { city: c, county: co } = await _counties.getCounties(city);
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
   return jobs;
 };
 
@@ -70,7 +66,7 @@ const run = async () => {
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
-}
+};
 
 if (require.main === module) {
   run();
