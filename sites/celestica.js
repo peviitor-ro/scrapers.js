@@ -23,46 +23,44 @@ const getJobs = async () => {
 
   const fetchData = async () => {
     let jobs = [];
-    await Promise.all(
-      pages.map(async (page) => {
-        const url = `https://careers.celestica.com/search/?createNewAlert=false&q=&locationsearch=Romania&startrow=${page}`;
-        const s = new Scraper(url);
-        const res = await s.get_soup("HTML");
-        const results = res.find("tbody").findAll("tr");
-        results.forEach((job) => {
-          jobs.push(job);
-        });
-      })
-    );
+
+    for (const page of pages) {
+      const url = `https://careers.celestica.com/search/?createNewAlert=false&q=&locationsearch=Romania&startrow=${page}`;
+      const s = new Scraper(url);
+      const res = await s.get_soup("HTML");
+      const results = res.find("tbody").findAll("tr");
+      results.forEach((job) => {
+        jobs.push(job);
+      });
+    }
+
     return jobs;
   };
 
   const jobsData = await fetchData();
 
-  await Promise.all(
-    jobsData.map(async (elem) => {
-      const job_title = elem.find("a").text.trim();
-      const job_link =
-        "https://careers.celestica.com" + elem.find("a").attrs.href;
-      const city = elem
-        .find("span", { class: "jobLocation" })
-        .text.split(",")[0]
-        .trim();
+  for (const elem of jobsData) {
+    const job_title = elem.find("a").text.trim();
+    const job_link =
+      "https://careers.celestica.com" + elem.find("a").attrs.href;
+    const city = elem
+      .find("span", { class: "jobLocation" })
+      .text.split(",")[0]
+      .trim();
 
-      let cities = [];
-      let counties = [];
+    let cities = [];
+    let counties = [];
 
-      const { city: c, county: co } = await _counties.getCounties(translate_city(city));
+    const { city: c, county: co } = await _counties.getCounties(translate_city(city));
 
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, "Romania", cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, "Romania", cities, counties);
+    jobs.push(job);
+  }
 
   return jobs;
 };

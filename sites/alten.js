@@ -19,39 +19,37 @@ const getJobs = async () => {
   const items = [];
   const jobs = [];
 
-  await Promise.all(
-    range(1, pages, 1).map(async (i) => {
-      url = "https://careers.altenromania.ro/jds/" + i;
-      scraper.url = url;
-      const res = await scraper.get_soup("JSON");
-      items.push(...JSON.parse(res.success.message).recordList);
-    })
-  );
+  for (const i of range(1, pages, 1)) {
+    url = "https://careers.altenromania.ro/jds/" + i;
+    scraper.url = url;
+    const res = await scraper.get_soup("JSON");
+    items.push(...JSON.parse(res.success.message).recordList);
+  }
 
-  await Promise.all(
-    items.map(async (job) => {
-      const job_title = job.titlu;
-      const job_link = "https://careers.altenromania.ro/job/" + job.id;
-      const city = job.locatie;
-      const country = "Romania";
-      const remote = [];
+  for (const job of items) {
+    const job_title = job.titlu;
+    const job_link = "https://careers.altenromania.ro/job/" + job.id;
+    const city = job.locatie;
+    const country = "Romania";
+    const remote = [];
 
-      const job_obj = generateJob(job_title, job_link, country);
+    const job_obj = generateJob(job_title, job_link, country);
 
-      if (city.includes("Remote")) {
-        remote.push("Remote");
-        job_obj.remote = remote;
-      } else {
-        const { city: c, county: co } = await _counties.getCounties(translate_city(city));
-        if (c) {
-          job_obj.city = c;
-          job_obj.county = co;
-        }
+    if (city.includes("Remote")) {
+      remote.push("Remote");
+      job_obj.remote = remote;
+    } else {
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city)
+      );
+      if (c) {
+        job_obj.city = c;
+        job_obj.county = co;
       }
+    }
 
-      jobs.push(job_obj);
-    })
-  );
+    jobs.push(job_obj);
+  }
 
   return jobs;
 };

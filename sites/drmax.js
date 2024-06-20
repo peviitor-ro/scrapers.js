@@ -37,42 +37,32 @@ const getJobs = async () => {
       soupElements[i].append(soupElements2[i]);
     }
 
-    await Promise.all(
-      soupElements.map(async (el) => {
-        const job_title = el.find("a").text;
-        const job_link = el.find("a").attrs.href;
-        let cities_elements = el.findAll("span", {
-          class: "awsm-job-specification-term",
-        });
+    for (const el of soupElements) {
+      const job_title = el.find("a").text;
+      const job_link = el.find("a").attrs.href;
+      let cities_elements = el.findAll("span", {
+        class: "awsm-job-specification-term",
+      });
 
-        let cities = [];
-        let counties = [];
+      let cities = [];
+      let counties = [];
 
-        await Promise.all(
-          cities_elements.map(async (city) => {
-            const city_element = city.text;
-            const { city: c, county: co } = await _counties.getCounties(
-              translate_city(city_element)
-            );
-            if (c) {
-              cities.push(c);
-              counties = [...new Set([...counties, ...co])];
-            }
-          })
+      for (const city of cities_elements) {
+        const city_element = city.text;
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(city_element)
         );
+        if (c) {
+          cities.push(c);
+          counties = [...new Set([...counties, ...co])];
+        }
+      }
 
-        const job = generateJob(
-          job_title,
-          job_link,
-          "Romania",
-          cities,
-          counties
-        );
-        jobs.push(job);
-      })
-    );
+      const job = generateJob(job_title, job_link, "Romania", cities, counties);
+      jobs.push(job);
+    }
   }
-  console.log(jobs);
+
   return jobs;
 };
 

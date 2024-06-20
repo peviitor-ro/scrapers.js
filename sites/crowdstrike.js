@@ -60,38 +60,37 @@ const getJobs = async () => {
     soup = await scraper.post(data);
     const { jobPostings } = soup;
 
-    await Promise.all(
-      jobPostings.map(async (jobPosting) => {
-        const { title, externalPath, locationsText } = jobPosting;
-        const job_link_prefix =
-          "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
-        const job_link = job_link_prefix + externalPath;
-        const remote = get_jobtype(locationsText.toLowerCase());
-        const separatorIndex = locationsText.indexOf(" ");
-        const location = translate_city(
-          locationsText.substring(0, separatorIndex)
-        );
+    for (const jobPosting of jobPostings) {
+      const { title, externalPath, locationsText } = jobPosting;
+      const job_link_prefix =
+        "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
+      const job_link = job_link_prefix + externalPath;
+      const remote = get_jobtype(locationsText.toLowerCase());
+      const separatorIndex = locationsText.indexOf(" ");
+      const location = translate_city(
+        locationsText.substring(0, separatorIndex)
+      );
 
-        const job = generateJob(title, job_link, "Romania", "", "", remote);
-        const { city, county } = await _counties.getCounties(location);
+      const job = generateJob(title, job_link, "Romania", "", "", remote);
+      const { city, county } = await _counties.getCounties(location);
 
-        if (city && county) {
-          job.city = city ? [city] : [];
-          job.county = county ? [county] : [];
-        } else {
-          const jobName = externalPath.split("/");
-          const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
-            jobName[jobName.length - 1]
-          }`;
-          const { city, county, remote } = await getAditionalCity(url);
-          job.city = city;
-          job.county = county;
-          job.remote = remote;
-        }
-        jobs.push(job);
-      })
-    );
+      if (city && county) {
+        job.city = city ? [city] : [];
+        job.county = county ? [county] : [];
+      } else {
+        const jobName = externalPath.split("/");
+        const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
+          jobName[jobName.length - 1]
+        }`;
+        const { city, county, remote } = await getAditionalCity(url);
+        job.city = city;
+        job.county = county;
+        job.remote = remote;
+      }
+      jobs.push(job);
+    }
   }
+
   return jobs;
 };
 

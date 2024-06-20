@@ -29,41 +29,39 @@ const getJobs = async () => {
   let elements = res.findAll("li");
 
   while (elements.length > 0) {
-    await Promise.all(
-      elements.map(async (item) => {
-        const jobsElements = item.findAll("span");
-        const job_title = jobsElements[0].text.trim();
-        const job_link = item.find("a").attrs.href;
-        let remote = [];
+    for (const item of elements) {
+      const jobsElements = item.findAll("span");
+      const job_title = jobsElements[0].text.trim();
+      const job_link = item.find("a").attrs.href;
+      let remote = [];
 
-        const location = jobsElements[3].text.trim().split(" ");
-        const country = "Romania";
-        const cities = [];
-        let counties = [];
+      const location = jobsElements[3].text.trim().split(" ");
+      const country = "Romania";
+      const cities = [];
+      let counties = [];
 
-        const city = translate_city(location[1]);
-        const { city: c, county: co } = await _counties.getCounties(city);
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
+      const city = translate_city(location[1]);
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
 
-        try {
-          const remoteElement = jobsElements[5].text.trim();
-          remote = get_jobtype(remoteElement);
-        } catch (error) {}
+      try {
+        const remoteElement = jobsElements[5].text.trim();
+        remote = get_jobtype(remoteElement);
+      } catch (error) {}
 
-        const job = generateJob(
-          job_title,
-          job_link,
-          country,
-          cities,
-          counties,
-          remote
-        );
-        jobs.push(job);
-      })
-    );
+      const job = generateJob(
+        job_title,
+        job_link,
+        country,
+        cities,
+        counties,
+        remote
+      );
+      jobs.push(job);
+    }
 
     page++;
     url = `https://careerromania.autoliv.com/jobs/show_more?layout=card-image&page=${page}&section_color_preset=primary`;

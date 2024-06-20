@@ -18,8 +18,8 @@ const getJobs = async () => {
   scraper.config.headers["User-Agent"] = "Mozilla/5.0";
 
   const data = {
-    "tx_conjobs_api[filter][locationSuggestChecksums][]":
-      "97df691231f6e638f96c63c52454e425",
+    "tx_conjobs_api[filter][location]":
+      '{"title":"Romania","type":"country","countryCode":"ro"}',
     "tx_conjobs_api[itemsPerPage]": 200,
     "tx_conjobs_api[currentPage]": 1,
   };
@@ -52,30 +52,28 @@ const getJobs = async () => {
 
   const jobsData = await fetchData();
 
-  await Promise.all(
-    jobsData.map(async (elem) => {
-      const job_title = elem.title;
-      const job_link = "https://jobs.continental.com/en/detail-page/job-detail/" + elem.url;
-      const city = elem.cityLabel;
-      const country = elem.countryLabel;
+  for (const elem of jobsData) {
+    const job_title = elem.title;
+    const job_link =
+      "https://jobs.continental.com/en/detail-page/job-detail/" + elem.url;
+    const city = elem.cityLabel;
+    const country = elem.countryLabel;
 
-      let cities = [];
-      let counties = [];
+    let cities = [];
+    let counties = [];
 
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city.trim())
-      );
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(city.trim())
+    );
 
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
-
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
   return jobs;
 };
 

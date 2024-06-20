@@ -20,17 +20,15 @@ const getAditionalcities = async (job_link) => {
   let cities = [];
   let counties = [];
 
-  await Promise.all(
-    items.map(async (item) => {
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(item.trim())
-      );
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
-    })
-  );
+  for (const item of items) {
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(item.trim())
+    );
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
+  }
 
   return { cities, counties };
 };
@@ -45,55 +43,52 @@ const getJobs = async () => {
   let items = res.findAll("li", { class: "z-career-job-card-image" });
 
   while (items.length > 0) {
-    await Promise.all(
-      items.map(async (item) => {
-        let cities = [];
-        let counties = [];
-        let jobtypes = [];
+    for (const item of items) {
+      let cities = [];
+      let counties = [];
+      let jobtypes = [];
 
-        const job_title = item
-          .find("span", { class: "text-block-base-link" })
-          .text.trim();
-        const job_link = item.find("a").attrs.href;
-        const spans = item.findAll("span");
+      const job_title = item
+        .find("span", { class: "text-block-base-link" })
+        .text.trim();
+      const job_link = item.find("a").attrs.href;
+      const spans = item.findAll("span");
 
-        let locations = spans[3].text.split(",");
+      let locations = spans[3].text.split(",");
 
-        await Promise.all(
-          locations.map(async (city) => {
-            const { city: c, county: co } = await _counties.getCounties(
-              translate_city(city.trim())
-            );
-            if (c) {
-              cities.push(c);
-              counties = [...new Set([...counties, ...co])];
-            } else {
-              const { cities: c, counties: co } =
-                await getAditionalcities(job_link);
-              cities.push(...c);
-              counties = [...new Set([...counties, ...co])];
-            }
-          })
+      for (const city of locations) {
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(city.trim())
         );
+        if (c) {
+          cities.push(c);
+          counties = [...new Set([...counties, ...co])];
+        } else {
+          const { cities: c, counties: co } =
+            await getAditionalcities(job_link);
+          cities.push(...c);
+          counties = [...new Set([...counties, ...co])];
+        }
+      }
 
-        spans.forEach((span) => {
-          const jobtype = get_jobtype(span.text.toLowerCase());
-          if (jobtype && !jobtypes.includes(jobtype)) {
-            jobtypes.push(...jobtype);
-          }
-        });
+      spans.forEach((span) => {
+        const jobtype = get_jobtype(span.text.toLowerCase());
+        if (jobtype && !jobtypes.includes(jobtype)) {
+          jobtypes.push(...jobtype);
+        }
+      });
 
-        const job = generateJob(
-          job_title,
-          job_link,
-          "Romania",
-          cities,
-          counties,
-          jobtypes
-        );
-        jobs.push(job);
-      })
-    );
+      const job = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        cities,
+        counties,
+        jobtypes
+      );
+      jobs.push(job);
+    }
+
     page++;
     scraper.url = `https://recrutare.evolvetoday.ro/jobs?page=${page}`;
     res = await scraper.get_soup("HTML");

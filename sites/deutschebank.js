@@ -18,30 +18,29 @@ const getJobs = async () => {
 
   const jobs = [];
 
-  await Promise.all(
-    elements.map(async (elem) => {
-      const job_title = elem.MatchedObjectDescriptor.PositionTitle;
-      const job_link =
-        "https://careers.db.com/professionals/search-roles/#/professional/job/" +
-        elem.MatchedObjectDescriptor.PositionID;
-      const city = elem.MatchedObjectDescriptor.OrganizationName;
+  for (const elem of elements) {
+    const job_title = elem.MatchedObjectDescriptor.PositionTitle;
+    const job_link =
+      "https://careers.db.com/professionals/search-roles/#/professional/job/" +
+      elem.MatchedObjectDescriptor.PositionID;
+    const city = elem.MatchedObjectDescriptor.OrganizationName;
 
-      let cities = [];
-      let counties = [];
+    let cities = [];
+    let counties = [];
 
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city.trim())
-      );
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(city.trim())
+    );
 
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, "Romania", cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, "Romania", cities, counties);
+    jobs.push(job);
+  }
+
   return jobs;
 };
 

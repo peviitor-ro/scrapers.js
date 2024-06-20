@@ -43,37 +43,35 @@ const getJobs = async () => {
       .find("tbody")
       .findAll("tr");
 
-    await Promise.all(
-      jobsElements.map(async (elem) => {
-        const job_title = elem.find("a").text;
-        const job_link = "https://careers.ey.com" + elem.find("a").attrs.href;
-        const location = elem
-          .find("span", { class: "jobLocation" })
-          .text.split(",")[0]
-          .trim();
-        let cities = [];
-        let counties = [];
-        const job_type = await get_job_type(job_link);
+    for (const elem of jobsElements) {
+      const job_title = elem.find("a").text;
+      const job_link = "https://careers.ey.com" + elem.find("a").attrs.href;
+      const location = elem
+        .find("span", { class: "jobLocation" })
+        .text.split(",")[0]
+        .trim();
+      let cities = [];
+      let counties = [];
+      const job_type = await get_job_type(job_link);
 
-        const { city: c, county: co } = await _counties.getCounties(
-          translate_city(location)
-        );
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(location)
+      );
 
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
-        const job = generateJob(
-          job_title,
-          job_link,
-          "Romania",
-          cities,
-          counties,
-          job_type
-        );
-        jobs.push(job);
-      })
-    );
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+      const job = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        cities,
+        counties,
+        job_type
+      );
+      jobs.push(job);
+    }
 
     url = "https://careers.ey.com/ey/search/?q=Romania&startrow=" + rows[i + 1];
     scraper.url = url;

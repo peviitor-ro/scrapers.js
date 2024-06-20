@@ -5,7 +5,7 @@ name: JavaScript Scraper
 
 on:
   schedule:
-    - cron: "40 18 * * *"
+    - cron: "40 12 * * *"
   workflow_dispatch:
 
 jobs:

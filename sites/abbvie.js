@@ -19,38 +19,35 @@ const getJobs = async () => {
 
   const jobs = [];
 
-  await Promise.all(
-    items.map(async (item) => {
-      let cities = [];
-      let counties = [];
-      const job_title = item
-        .find("a", { class: "attrax-vacancy-tile__title" })
-        .text.trim();
-      const job_link =
-        "https://careers.abbvie.com" +
-        item.find("a", { class: "attrax-vacancy-tile__title" }).attrs.href;
-      const country = "Romania";
-      const locationContainer = item
-        .find("div", {
-          class: "attrax-vacancy-tile__location-freetext",
-        })
-        .findAll("p");
+  for (const item of items) {
+    let cities = [];
+    let counties = [];
+    const job_title = item
+      .find("a", { class: "attrax-vacancy-tile__title" })
+      .text.trim();
+    const job_link =
+      "https://careers.abbvie.com" +
+      item.find("a", { class: "attrax-vacancy-tile__title" }).attrs.href;
+    const country = "Romania";
+    const locationContainer = item
+      .find("div", {
+        class: "attrax-vacancy-tile__location-freetext",
+      })
+      .findAll("p");
 
-      const city = translate_city(
-        locationContainer[locationContainer.length - 1].text
-          .split(",")[0]
-          .trim()
-      );
-      const { city: c, county: co } = await _counties.getCounties(city);
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    const city = translate_city(
+      locationContainer[locationContainer.length - 1].text.split(",")[0].trim()
+    );
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
+
   return jobs;
 };
 

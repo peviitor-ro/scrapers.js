@@ -23,19 +23,17 @@ const getAditionalCity = async (url) => {
   const remote =
     res.jobPostingInfo.remoteType === "Fully Remote" ? ["Remote"] : [];
 
-    await Promise.all(
-      citys_elements.map(async (elem) => {
-        const separatorIndex = elem.indexOf("(");
-        let city = elem.substring(separatorIndex + 1).replace(")", "");
-        const { city: c, county: co } = await _counties.getCounties(
-          translate_city(city)
-        );
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
-        }
-      })
+  for (const elem of citys_elements) {
+    const separatorIndex = elem.indexOf("(");
+    let city = elem.substring(separatorIndex + 1).replace(")", "");
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(city)
     );
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
+  }
 
   return { cities, counties, remote };
 };
@@ -76,34 +74,33 @@ const getJobs = async () => {
   for (let i = 0; i < numberOfPages; i += 1) {
     const { jobPostings } = soup;
 
-    await Promise.all(
-      jobPostings.map(async (jobPosting) => {
-        const { title, externalPath, locationsText } = jobPosting;
+    for (const jobPosting of jobPostings) {
+      const { title, externalPath, locationsText } = jobPosting;
 
-        const job_link_prefix =
-          "https://dynata.wd1.myworkdayjobs.com/en-US/careers";
-        const job_link = job_link_prefix + externalPath;
+      const job_link_prefix =
+        "https://dynata.wd1.myworkdayjobs.com/en-US/careers";
+      const job_link = job_link_prefix + externalPath;
 
-        const separatorIndex = locationsText.indexOf("(");
-        let city = locationsText.substring(separatorIndex + 1).replace(")", "");
+      const separatorIndex = locationsText.indexOf("(");
+      let city = locationsText.substring(separatorIndex + 1).replace(")", "");
 
-        const {
-          city: c,
-          county: co,
-        
-        } = await _counties.getCounties(translate_city(city));
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city)
+      );
 
-        if (c) {
-          jobs.push(generateJob(title, job_link, "Romania", c, co));
-        } else {
-          const jobName = externalPath.split("/")[3];
-          const url = `https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/job/${jobName}`;
-          const { cities, counties, remote } = await getAditionalCity(url);
+      if (c) {
+        jobs.push(generateJob(title, job_link, "Romania", c, co));
+      } else {
+        const jobName = externalPath.split("/")[3];
+        const url = `https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/job/${jobName}`;
+        const { cities, counties, remote } = await getAditionalCity(url);
 
-          jobs.push(generateJob(title, job_link, "Romania", cities, counties, remote));
-        }
-      })
-    );
+        jobs.push(
+          generateJob(title, job_link, "Romania", cities, counties, remote)
+        );
+      }
+    }
+
     data.offset = i * limit;
     soup = await scraper.post(data);
   }
@@ -115,7 +112,7 @@ const run = async () => {
   const logo =
     "https://www.dynata.com/wp-content/themes/dynata/images/dynata-logo.png";
   const jobs = await getJobs();
-  const params = getParams( company, logo);
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 

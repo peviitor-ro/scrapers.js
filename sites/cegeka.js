@@ -22,32 +22,28 @@ const getJobs = async () => {
 
   const json = JSON.parse(jobsObject[0].replace("let vacancies = ", ""));
 
-  await Promise.all(
-    json.map(async (elem) => {
-      const job_title = elem.header_data.vacancy_title;
-      const job_link = elem.slug;
+  for (const elem of json) {
+    const job_title = elem.header_data.vacancy_title;
+    const job_link = elem.slug;
 
-      let cities = [];
-      let counties = [];
+    let cities = [];
+    let counties = [];
 
-      const locations = JSON.parse(elem.header_data.filter_location);
+    const locations = JSON.parse(elem.header_data.filter_location);
 
-      await Promise.all(
-        locations.map(async (location) => {
-          const { city: c, county: co } = await _counties.getCounties(
-            translate_city(location.city.trim())
-          );
-          if (c) {
-            cities.push(c);
-            counties = [...new Set([...counties, ...co])];
-          }
-        })
+    for (const location of locations) {
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(location.city.trim())
       );
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+    }
 
-      const job = generateJob(job_title, job_link, "Romania", cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, "Romania", cities, counties);
+    jobs.push(job);
+  }
 
   return jobs;
 };
@@ -59,7 +55,7 @@ const run = async () => {
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
-}
+};
 
 if (require.main === module) {
   run();

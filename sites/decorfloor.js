@@ -38,7 +38,7 @@ const getAditionalCity = async (url) => {
     counties = [...new Set([...counties, ...co])];
   }
 
-  return { city: cities, county: counties }
+  return { city: cities, county: counties };
 };
 
 const getJobs = async () => {
@@ -51,25 +51,24 @@ const getJobs = async () => {
 
   const jobsElements = soup.findAll("div", { class: "vc_gitem-col" });
 
-  await Promise.all(
-    jobsElements.map(async (elem) => {
-      const job_title = elem.find("h4").text.trim();
-      const job_link = elem.find("a").attrs.href;
-      
-      let cities = [];
-      let counties = [];
+  for (const elem of jobsElements) {
+    const job_title = elem.find("h4").text.trim();
+    const job_link = elem.find("a").attrs.href;
 
-      const { city: c, county: co } = await getAditionalCity(job_link);
+    let cities = [];
+    let counties = [];
 
-      if (c) {
-        cities.push(...c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    const { city: c, county: co } = await getAditionalCity(job_link);
 
-      const job = generateJob(job_title, job_link, "Romania", cities, counties);
-      jobs.push(job);
-    })
-  );
+    if (c) {
+      cities.push(...c);
+      counties = [...new Set([...counties, ...co])];
+    }
+
+    const job = generateJob(job_title, job_link, "Romania", cities, counties);
+    jobs.push(job);
+  }
+
   return jobs;
 };
 

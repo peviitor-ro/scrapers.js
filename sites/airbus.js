@@ -26,42 +26,38 @@ const getJobs = async () => {
   const items = [];
 
   if (totalJobs > data.limit) {
-    await Promise.all(
-      pages.map(async (page) => {
-        data["offset"] = page;
-        const res = await scraper.post(data);
-        items.push(...res.jobPostings);
-      })
-    );
+    for (const page of pages) {
+      data["offset"] = page;
+      const res = await scraper.post(data);
+      items.push(...res.jobPostings);
+    }
   } else {
     items.push(...res.jobPostings);
   }
 
   const jobs = [];
 
-  await Promise.all(
-    items.map(async (item) => {
-      let cities = [];
-      let counties = [];
-      const job_title = item.title;
-      const job_link =
-        "https://ag.wd3.myworkdayjobs.com/en-US/Airbus" + item.externalPath;
-      const country = "Romania";
-      const locationContainer = item.locationsText.split(",");
-      const city = translate_city(
-        locationContainer[0].replace("Bucarest", "Bucuresti")
-      );
+  for (const item of items) {
+    let cities = [];
+    let counties = [];
+    const job_title = item.title;
+    const job_link =
+      "https://ag.wd3.myworkdayjobs.com/en-US/Airbus" + item.externalPath;
+    const country = "Romania";
+    const locationContainer = item.locationsText.split(",");
+    const city = translate_city(
+      locationContainer[0].replace("Bucarest", "Bucuresti")
+    );
 
-      const { city: c, county: co } = await _counties.getCounties(city);
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
+    }
 
-      const job = generateJob(job_title, job_link, country, cities, counties);
-      jobs.push(job);
-    })
-  );
+    const job = generateJob(job_title, job_link, country, cities, counties);
+    jobs.push(job);
+  }
   return jobs;
 };
 
@@ -71,7 +67,7 @@ const run = async () => {
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
-}
+};
 
 if (require.main === module) {
   run();
