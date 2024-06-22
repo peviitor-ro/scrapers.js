@@ -1,15 +1,13 @@
+const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
-
-const generateJob = (job_title, job_link, country, city, county, remote) => ({
-  job_title,
-  job_link,
-  country,
-  city,
-  county,
-  remote,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   let url =
@@ -31,7 +29,7 @@ const getJobs = async () => {
   }
 
   for (let i = 0; i < pages; i++) {
-    items.forEach((item) => {
+    for (const item of items) {
       const isRo = item
         .find("span", { class: "jobLocation" })
         .text.split(",")[2]
@@ -42,54 +40,46 @@ const getJobs = async () => {
         const job_link =
           "https://jobs.halliburton.com" + item.find("a").attrs.href;
 
-        let city = item
-          .find("span", { class: "jobLocation" })
-          .text.split(",")[0]
-          .trim();
-        if (city.includes("Bucharest")) {
-          city = "Bucuresti";
-        }
-        const { foudedTown, county } = getTownAndCounty(city);
+        let city = translate_city(
+          item.find("span", { class: "jobLocation" }).text.split(",")[0].trim()
+        );
+
+        let counties = [];
         const remote = [];
 
-        jobs.push(
-          generateJob(
-            job_title,
-            job_link,
-            "Romania",
-            foudedTown,
-            county,
-            remote
-          )
+        const { city: c, county: co } = await _counties.getCounties(city);
+
+        if (c) {
+          counties = [...new Set([...counties, ...co])];
+        }
+
+        const job_element = generateJob(
+          job_title,
+          job_link,
+          "Romania",
+          c,
+          counties,
+          remote
         );
+        jobs.push(job_element);
       }
-    });
+    }
   }
 
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Halliburton";
   const logo =
     "https://rmkcdn.successfactors.com/6fdd2711/8ba9d1d9-30b6-4c01-b093-b.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {
-    run();
+  run();
 }
 
 module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
