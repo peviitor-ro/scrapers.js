@@ -1,15 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, country, county, city) => ({
-  job_title,
-  job_link,
-  country,
-  county,
-  city,
-  remote: [],
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   const url = "https://www.kontron.ro/Jobs.ro.html";
@@ -18,11 +16,11 @@ const getJobs = async () => {
 
   const soup = await scraper.get_soup("HTML");
 
-  const jobsElements = soup
+  const items = soup
     .find("ul", { class: "filtered-item-list__items" })
     .findAll("li");
 
-  jobsElements.forEach((job) => {
+  for (const job of items) {
     const job_title = job
       .find("div", { class: "filtered-item-list__items__item__title" })
       .find("a")
@@ -32,36 +30,28 @@ const getJobs = async () => {
       job
         .find("div", { class: "filtered-item-list__items__item__title" })
         .find("a").attrs.href;
-    const city = job
-      .find("div", { class: "filtered-item-list__items__item__location" })
-      .find("a")
-      .text.trim();
-
-    const { foudedTown, county } = getTownAndCounty(
-      translate_city(city.toLowerCase())
+    const city = translate_city(
+      job
+        .find("div", { class: "filtered-item-list__items__item__location" })
+        .find("a")
+        .text.trim()
     );
 
-    jobs.push(generateJob(job_title, job_link, "Romania", county, foudedTown));
-  });
+    const { city: c, county: co } = await _counties.getCounties(city);
+
+    const job_element = generateJob(job_title, job_link, "Romania", c, co);
+
+    jobs.push(job_element);
+  }
 
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "kontron";
   const logo = "https://www.kontron.ro/kontron_Logo-RGB-2C.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
