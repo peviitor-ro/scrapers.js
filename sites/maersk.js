@@ -1,15 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { findCity, translate_city, replace_char } = require("../utils.js");
+const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, country, county, city) => ({
-  job_title,
-  job_link,
-  country,
-  county,
-  city,
-  remote: [],
-});
+const _counties = new Counties();
 
 const get_headers = async () => {
   const url = "https://www.maersk.com/careers/vacancies/assets/0bab2e7.js";
@@ -28,46 +26,35 @@ const getJobs = async () => {
   scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
   const type = "JSON";
   const res = await scraper.get_soup(type);
-  const jobs_objects = res.results;
+  const items = res.results;
   const jobs = [];
-  jobs_objects.forEach((job) => {
+
+  for (const job of items) {
     const job_title = job.Title;
     const job_link = job.Url;
     const country = job.Country;
 
-    let city = job.City;
+    const city = job.City ? job.City : "";
+    let job_element = { job_title, job_link, country, city };
 
-    if (city !== null) {
-      const { foudedTown, county } = getTownAndCounty(
-        translate_city(replace_char(city.toLowerCase(), ["z"], ""))
+    if (city) {
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city)
       );
-      jobs.push(generateJob(job_title, job_link, country, county, foudedTown));
-    } else {
-      const { foudedTown, county } = getTownAndCounty(
-        findCity(replace_char(job_link, ["-", "/"], " "))
-      );
-      jobs.push(generateJob(job_title, job_link, country, county, foudedTown));
+      job_element = generateJob(job_title, job_link, country, c, co);
     }
-  });
+
+    jobs.push(job_element);
+  }
 
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Maersk";
   const logo = "https://jobsearch.maersk.com/jobposting/img/logo-colored.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
