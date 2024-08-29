@@ -16,10 +16,10 @@ const getJobs = async () => {
   const scraper = new Scraper(url);
   const response = await scraper.get_soup("HTML");
 
-  const pattern = /csod.context={.*?}}};/g;
+  const pattern = /csod.context={.*?};/g;
   const context = response.text.match(pattern)[0];
   const contextJson = JSON.parse(
-    context.replace("csod.context=", "").replace("}}};", "}}}")
+    context.replace("csod.context=", "").replace("};", "}")
   );
   const headers = {
     "Content-Type": "application/json",
