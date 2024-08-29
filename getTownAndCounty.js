@@ -35,7 +35,7 @@ class Counties {
       response = await fetch(response.next).then((response) => response.json());
     }
 
-    counties_found.push(...response.results);
+    counties_found.push(...response.results || []);
 
     let counties = [];
     counties_found.map((c) => {
