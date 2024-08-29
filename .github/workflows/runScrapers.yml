@@ -19,9 +19,9 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 18.x
-      - name: npm i
+      - name: Install Dependencies
         run: npm i
-      - name: node runScrapers.js
+      - name: Run Scrapers
         run: |
           source access_token.sh
           node runScrapers.js

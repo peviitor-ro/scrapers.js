@@ -20,6 +20,6 @@ jobs:
       with:
         node-version: 14.x
     - name: Install dependencies
-      run: npm install axios
+      run: npm i
     - name: Update API Files
       run: node apiUpdateFiles.js
