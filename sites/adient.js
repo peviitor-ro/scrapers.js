@@ -1,14 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, country, city, county) => ({
-  job_title,
-  job_link,
-  country,
-  city,
-  county,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
@@ -36,38 +35,44 @@ const getJobs = async () => {
     data.offset = i * limit;
     soup = await scraper.post(data);
     const { jobPostings } = soup;
-    jobPostings.forEach((jobPosting) => {
-      const { title, externalPath, locationsText } = jobPosting;
+
+    for (const job of jobPostings) {
+      const job_title = job.title;
+
       const job_link_prefix =
         "https://adient.wd3.myworkdayjobs.com/en-US/External";
-      const job_link = job_link_prefix + externalPath;
-      const separatorIndex = locationsText.indexOf(",");
-      const country = locationsText.substring(0, separatorIndex);
-      const city = translate_city(locationsText.substring(separatorIndex + 1));
-      const { county } = getTownAndCounty(city);
-      const job = generateJob(title, job_link, country, city, county);
-      jobs.push(job);
-    });
-  }
+      const job_link = job_link_prefix + job.externalPath;
+
+      const separatorIndex = job.locationsText.indexOf(",");
+      const city = translate_city(job.locationsText.substring(separatorIndex + 1));
+
+      let counties = [];
+
+      const { city: c, county: co } = await _counties.getCounties(city);
+
+      if (c) {
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job_element = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        c,
+        counties
+      );
+      jobs.push(job_element);
+    };
+  };
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Adient";
   const logo =
     "https://www.adient.com/wp-content/uploads/2021/09/Adient_Logo.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
