@@ -6,6 +6,8 @@ const translate_city = (city) => {
    * @returns {String} city
    */
 
+  if (!city) return "";
+
   // Populate this object with the cities that need translation
   const cities = {
     bucharest: "Bucuresti",
