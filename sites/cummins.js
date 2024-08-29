@@ -11,22 +11,32 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://cummins.jobs/rom/jobs/?offset=10&num_items=100&filter_path=%2Fjobs%2F";
+    "https://prod-search-api.jobsyn.org/api/v1/solr/search?location=Romania&page=1&num_items=100";
+  
   const scraper = new Scraper(url);
+  Object.assign(scraper.config.headers, {
+    "Content-Type": "application/json",
+    "x-origin": "https://cummins.jobs",
+  });
+  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
   const jobs = [];
 
-  const soup = await scraper.get_soup("HTML");
+  const soup = await scraper.get_soup("JSON");
 
-  const jobsElements = soup.findAll("li", { class: "direct_joblisting" });
+  const jobsElements = soup.jobs;
 
-  for (const elem of jobsElements) {
-    const job_title = elem.find("a").text.trim();
-    const job_link = "https://cummins.jobs" + elem.find("a").attrs.href;
-    const city = elem
-      .find("span", { class: "hiringPlace" })
-      .text.split(",")[0]
-      .trim()
-      .split(" ");
+  for (let index = 0; index < jobsElements.length; index++) {
+    const job_title = jobsElements[index].title_exact;
+    const job_link =
+      "https://cummins.jobs/" +
+      soup.filters.city[index].link.split("/")[2] +
+      "/" +
+      jobsElements[index].title_slug +
+      "/" +
+      jobsElements[index].guid +
+      "/job/";
+
+    const city = jobsElements[index].city_exact;
 
     let cities = [];
     let counties = [];
