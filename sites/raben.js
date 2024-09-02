@@ -1,5 +1,14 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
 const jsdom = require("jsdom");
+
+const _counties = new Counties();
 
 class EditedScraper extends Scraper {
   async render_page() {
@@ -7,19 +16,12 @@ class EditedScraper extends Scraper {
       runScripts: "dangerously",
     });
     browser.window.onload = function () {
-      return this.window.__NUXT__.data[0].page.content.colPos0[1].content
+      return this.window.__NUXT__.data[0].t3page.content.colPos0[1].content
         .offers;
     };
     return browser.window.onload();
   }
 }
-
-const generateJob = (job_title, job_link, city, country) => ({
-  job_title,
-  job_link,
-  country,
-  city,
-});
 
 const getJobs = async () => {
   const urls = [
@@ -30,37 +32,37 @@ const getJobs = async () => {
 
   let jobs = [];
 
-  urls.forEach(async (url, idx) => {
+  for (const url of urls) {
     const scraper = new EditedScraper(url);
     const json = await scraper.render_page();
 
-    for (let job of json) {
-      jobs.push(generateJob(job.title, job.link.url, job.city, job.country));
+    for (const item of json) {
+      const job_title = item.title;
+      const job_link = item.link;
+      const job_city = translate_city(
+        item.city.charAt(0).toUpperCase() + item.city.slice(1)
+      );
+
+      let counties = [];
+
+      const { city: c, county: co } = await _counties.getCounties(job_city);
+
+      if (c) {
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job = generateJob(job_title, job_link, "Romania", c, counties);
+      jobs.push(job);
     }
-  });
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(jobs);
-    }, 2000);
-  });
-};
-
-const getParams = () => {
-  const company = "Raben";
-  const logo = "https://romania.raben-group.com/Raben%20logo.svg";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
+  }
+  return jobs;
 };
 
 const run = async () => {
+  const company = "Raben";
+  const logo = "https://romania.raben-group.com/Raben%20logo.svg";
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
