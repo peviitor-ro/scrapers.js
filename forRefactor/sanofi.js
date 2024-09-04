@@ -1,37 +1,18 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
 const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
 const Jssoup = require("jssoup").default;
+const { Counties } = require("../getTownAndCounty.js");
+
+const _counties = new Counties();
 
 const additionalHeaders = {
   "Content-Type": "application/json",
   "X-Requested-With": "XMLHttpRequest",
-};
-
-const generateJob = (job_title, job_link, country, county, city) => ({
-  job_title,
-  job_link,
-  country,
-  county,
-  city,
-  remote: [],
-});
-
-const getAditionalCity = async (url) => {
-  const scraper = new Scraper(url);
-  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
-  const res = await scraper.get_soup("HTML");
-  const locations = res.find("span", { class: "job-location" }).text.split(";");
-  return new Promise((resolve) => {
-    locations.forEach((location) => {
-      const { foudedTown, county } = getTownAndCounty(
-        translate_city(location.trim().toLowerCase())
-      );
-      if (foudedTown && county) {
-        resolve({ foudedTown, county });
-      }
-    });
-  });
 };
 
 const getJobs = async () => {
@@ -47,58 +28,35 @@ const getJobs = async () => {
 
   const soup = new Jssoup(res.results);
 
-  const jobsElements = soup.findAll("ul")[1].findAll("li");
+  const items = soup.findAll("ul")[1].findAll("li");
 
-  await Promise.all(
-    jobsElements.map(async (job) => {
-      const job_title = job.find("h2").text.trim();
-      const job_link = "https://en.jobs.sanofi.com" + job.find("a").attrs.href;
-      const city = job
-        .find("span", { class: "job-location" })
-        .text.split(",")[0]
-        .trim();
+  for (const item of items) {
+    const job_title = item.find("h2").text.trim();
+    const job_link = "https://jobs.sanofi.com" + item.find("a").attrs.href;
+    const location = translate_city(
+      item.find("span", { class: "job-location" }).text.split(",")[0].trim()
+    );
 
-      const { foudedTown, county } = getTownAndCounty(
-        translate_city(city.toLowerCase())
-      );
+    let counties = [];
 
-      const isCounty = async () => {
-        if (foudedTown && county) {
-          return { foudedTown, county };
-        } else {
-          return await getAditionalCity(job_link);
-        }
-      };
+    const { city: c, county: co } = await _counties.getCounties(location);
 
-      await isCounty().then((res) => {
-        const { foudedTown, county } = res;
-        jobs.push(
-          generateJob(job_title, job_link, "Romania", county, foudedTown)
-        );
-      });
-    })
-  );
+    if (c) {
+      counties = [...new Set([...counties, ...co])];
+    }
 
+    const job = generateJob(job_title, job_link, "Romania", c, counties);
+    jobs.push(job);
+  }
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "Sanofi";
   const logo =
     "https://www.sanofi.ro/dam/jcr:9f06f321-3c2b-485f-8a84-b6c33badc56a/logo-header-color-large.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 

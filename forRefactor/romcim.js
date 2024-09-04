@@ -1,45 +1,55 @@
-"use strict";
-const scraper = require("../peviitor_scraper.js");
-const uuid = require("uuid");
+const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-let url = "https://www.romcim.ro/cariere/locuri-de-munca-si-stagii/";
+const _counties = new Counties();
 
-const company = { company: "Romcim" };
-let finalJobs = [];
+const getJobs = async () => {
+  const url = "https://www.romcim.ro/cariere/locuri-de-munca-si-stagii/";
 
-const s = new scraper.Scraper(url);
+  const scraper = new Scraper(url);
 
-s.soup
-  .then((soup) => {
-    const jobs = soup.find("ul", { class: "listare-joburi" }).findAll("li");
+  const jobs = [];
 
-    jobs.forEach((job) => {
-      const id = uuid.v4();
-      const job_title = job.find("a").text.trim();
-      const job_link = job.find("a").attrs.href;
-      const city = job.find("span").text.trim();
+  const soup = await scraper.get_soup("HTML");
 
-      finalJobs.push({
-        id: id,
-        job_title: job_title,
-        job_link: job_link,
-        company: company.company,
-        country: "Romania",
-        city: city,
-      });
-    });
-  })
-  .then(() => {
-    console.log(JSON.stringify(finalJobs, null, 2));
+  const items = soup.find("ul", { class: "listare-joburi" }).findAll("li");
 
-    scraper.postApiPeViitor(finalJobs, company);
+  for (const item of items) {
+    const job_title = item.find("a").text.trim();
+    const job_link = item.find("a").attrs.href;
+    const location = translate_city(item.find("span").text.trim());
 
-    let logo =
-      "https://www.romcim.ro/wp-content/uploads/2021/04/Artboard-1-1.png";
+    let counties = [];
 
-    let postLogo = new scraper.ApiScraper(
-      "https://api.peviitor.ro/v1/logo/add/"
-    );
-    postLogo.headers.headers["Content-Type"] = "application/json";
-    postLogo.post(JSON.stringify([{ id: company.company, logo: logo }]));
-  });
+    const { city: c, county: co } = await _counties.getCounties(location);
+
+    if (c) {
+      counties = [...new Set([...counties, ...co])];
+    }
+
+    const job = generateJob(job_title, job_link, "Romania", c, counties);
+    jobs.push(job);
+  }
+  return jobs;
+};
+
+const run = async () => {
+  const company = "Romcim";
+  const logo =
+    "https://www.romcim.ro/wp-content/uploads/2021/04/Artboard-1-1.png";
+  const jobs = await getJobs();
+  const params = getParams(company, logo);
+  await postApiPeViitor(jobs, params);
+};
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
