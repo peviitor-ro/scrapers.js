@@ -1,15 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
-const { translate_city, replace_char } = require("../utils.js");
+const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (job_title, job_link, city, county, remote) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-  remote,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   const url = "https://careers.slb.com/job-listing";
@@ -19,55 +17,52 @@ const getJobs = async () => {
   const jobs = [];
 
   try {
-    const jobs_objects = res
+    const items = res
       .find("table", { id: "jobsTable" })
       .find("tbody")
       .findAll("tr");
 
-    jobs_objects.forEach((job) => {
-      const country = job.findAll("td")[3].text.trim();
+    for (const item of items) {
+      const country = item.findAll("td")[3].text.trim();
 
       if (country == "Romania") {
-        const job_title = job.find("a").text.trim();
-        let link = job.find("a").attrs.href;
+        const job_title = item.find("a").text.trim();
+        let link = item.find("a").attrs.href;
         let job_link = "";
 
         if (link.includes("https")) {
           job_link = link.replace(/;/g, "&");
         } else {
-          job_link = "https://careers.slb.com" + job.find("a").attrs.href;
+          job_link = "https://careers.slb.com" + item.find("a").attrs.href;
         }
 
-        const city = job.findAll("td")[2].text.trim();
-        const { foudedTown, county } = getTownAndCounty(
-          translate_city(replace_char(city.toLowerCase(), ["-"], " "))
-        );
+        const city = translate_city(item.findAll("td")[2].text.trim());
+
+        let counties = [];
+
+        const { city: c, county: co } = _counties.getCounties(city);
+
+        if (c) {
+          counties = [...new Set([...counties, ...co])];
+        }
 
         if (job_title) {
-          jobs.push(generateJob(job_title, job_link, foudedTown, county, []));
+          const job = generateJob(job_title, job_link, "Romania", c, counties);
+          jobs.push(job);
         }
       }
-    });
+    }
   } catch (error) {}
 
   return jobs;
 };
 
-const getParams = () => {
-  const company = "SLB";
-  const logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/SLB_Logo_2022.svg/1024px-SLB_Logo_2022.svg.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
 const run = async () => {
+  const company = "SLB";
+  const logo =
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/SLB_Logo_2022.svg/1024px-SLB_Logo_2022.svg.png";
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
