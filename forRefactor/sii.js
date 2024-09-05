@@ -1,20 +1,13 @@
-const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-const { getTownAndCounty } = require("../getTownAndCounty.js");
+const { translate_city } = require("../utils.js");
+const {
+  Scraper,
+  postApiPeViitor,
+  generateJob,
+  getParams,
+} = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
 
-const generateJob = (
-  job_title,
-  job_link,
-  city = "Bucuresti",
-  county = "Bucuresti",
-  remote
-) => ({
-  job_title,
-  job_link,
-  country: "Romania",
-  city,
-  county,
-  remote,
-});
+const _counties = new Counties();
 
 const getJobs = async () => {
   let url = "https://www.siiromania.ro/jobopportunities/#section";
@@ -26,36 +19,38 @@ const getJobs = async () => {
   let items = res.find("tbody").findAll("tr");
 
   while (items.length > 0) {
-    items.forEach((item) => {
-      const citys = [];
-      const countys = [];
+    for (const item of items) {
       const jobtypes = [];
 
       const job_title = item.findAll("td")[0].text.trim();
       const job_link = item.findAll("td")[0].find("a").attrs.href;
 
-      const isCity = item.findAll("td")[2].text.split("-");
-      if (isCity[isCity.length - 1] === "Bucharest") {
-        isCity[isCity.length - 1] = "Bucuresti";
-      }
-
-      if (getTownAndCounty(isCity[isCity.length - 1].trim()).foudedTown) {
-        citys.push(
-          getTownAndCounty(isCity[isCity.length - 1].trim()).foudedTown
-        );
-        countys.push(getTownAndCounty(isCity[isCity.length - 1].trim()).county);
-      }
-
-      isCity.forEach((item) => {
-        if (item.includes("Remote") || item.includes("Hybrid")) {
-          jobtypes.push(item.includes("Remote") ? "Remote" : "Hybrid");
-        }
-      });
-
-      jobs.push(
-        generateJob(job_title, job_link, citys[0], countys[0], jobtypes)
+      const city = translate_city(
+        item.findAll("td")[2].text.split("-")[0].trim()
       );
-    });
+
+      const { city: c, county: co } = await _counties.getCounties(city);
+
+      let counties = [];
+
+      if (c) {
+        counties = new Set([...counties, ...co]);
+      }
+
+      if (city.includes("Remote") || city.includes("Hybrid")) {
+        jobtypes.push(city.includes("Remote") ? "remote" : "hybrid");
+      }
+
+      const job = generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        c,
+        counties,
+        jobtypes
+      );
+      jobs.push(job);
+    }
 
     pages++;
     url = `https://www.siiromania.ro/jobopportunities/page/${pages}/#section`;
@@ -67,26 +62,15 @@ const getJobs = async () => {
       items = [];
     }
   }
-
   return jobs;
 };
 
-const getParams = () => {
+const run = async () => {
   const company = "SII";
   const logo =
     "https://www.siiromania.ro/wp-content/themes/corporate-sii-romania/img/logo.png";
-  const apikey = process.env.APIKEY;
-  const params = {
-    company,
-    logo,
-    apikey,
-  };
-  return params;
-};
-
-const run = async () => {
   const jobs = await getJobs();
-  const params = getParams();
+  const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
 
