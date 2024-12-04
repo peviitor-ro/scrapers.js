@@ -6,7 +6,7 @@ const {
 } = require("peviitor_jsscraper");
 
 const getJobs = async () => {
-  const url = "https://www.conarg.co/ro/cariere/oportunitati-de-cariera.html";
+  const url = "https://conarg.co/en/13-cariere.html";
   const scraper = new Scraper(url);
   const jobs = [];
   const soup = await scraper.get_soup("HTML");
