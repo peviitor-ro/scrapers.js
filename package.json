@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/VACostin/peviitor_jsscraper_sites#readme",
   "dependencies": {
-    "peviitor_jsscraper": "^1.1.2",
+    "peviitor_jsscraper": "^1.1.3",
     "querystring": "^0.2.1"
   },
   "devDependencies": {
