@@ -11,33 +11,51 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   let url =
-    "https://node.bolt.eu/careers-portal/careersPortal/v3/getJobs/?version=CP.4.07";
+    "https://bolt.eu/en/careers/positions/?location=Romania-Bucharest&_rsc=yl102";
   const jobs = [];
   const scraper = new Scraper(url);
   scraper.config.headers["User-Agent"] = "Mozilla/5.0";
-  const type = "JSON";
+  const type = "HTML";
   const res = await scraper.get_soup(type);
-  const json = res.data.jobs;
+  const modifiedText = res.text.replace(/\\/g, "");
+  const rgx = /"parsedJobs":\[(.*?)\],"uniqueLocations":/gm;
 
-  for (const item of json) {
-    const country = item.locations[0].country;
+  const jobsArray = JSON.parse(
+    modifiedText
+      .match(rgx)[0]
+      .replace(',"uniqueLocations":', "")
+      .replace(/"parsedJobs":/g, "")
+  );
+
+  for (const item of jobsArray) {
+    let country = null;
+    let loc = null;
+
+    for (const location of item.header.locations) {
+
+      if (location.country === "Romania"){
+        country = location.country;
+        loc = location.city;
+      }
+    }
+
     if (country !== "Romania") continue;
 
     let cities = [];
     let counties = [];
-    const job_title = item.title;
-    const job_link = "https://bolt.eu/en/careers/positions/" + item.id;
+    const job_title = item.header.roleTitle;
+    const job_link = "https://bolt.eu/" + item.body.applyLinkProps.buttonHref;
 
-    const city = translate_city(item.locations[0].city);
+    const city = translate_city(loc);
     const { city: c, county: co } = await _counties.getCounties(city);
     if (c) {
       cities.push(c);
       counties = [...new Set([...counties, ...co])];
     }
     const job = generateJob(job_title, job_link, country, cities, counties);
+
     jobs.push(job);
   }
-
   return jobs;
 };
 
