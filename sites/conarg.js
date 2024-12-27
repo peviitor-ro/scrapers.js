@@ -6,22 +6,22 @@ const {
 } = require("peviitor_jsscraper");
 
 const getJobs = async () => {
-  const url = "https://conarg.co/en/13-cariere.html";
+  const url = "https://conarg.co/cariere.html";
   const scraper = new Scraper(url);
   const jobs = [];
   const soup = await scraper.get_soup("HTML");
 
-  const jobsElements = soup
-    .find("article", { class: "wk-content" })
-    .findAll("li");
+  const jobsElements = soup.findAll("h3", { class: "el-title" });
+
+  let jobId = 1;
 
   jobsElements.forEach((elem) => {
-    const job_title = elem.find("h2").text.trim();
-    const job_link = "https://www.conarg.co" + elem.find("a").attrs.href;
-    const city = "Bucuresti";
-    const county = "Bucuresti";
-    const job = generateJob(job_title, job_link, "Romania", city, county);
+    const job_title = elem.text.trim();
+    const job_link = url + `#${jobId}`;
+    const job = generateJob(job_title, job_link, "Romania");
     jobs.push(job);
+
+    jobId++;
   });
 
   return jobs;
