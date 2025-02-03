@@ -11,51 +11,33 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://career.globant.com/search/?createNewAlert=false&q=&optionsFacetsDD_department=&optionsFacetsDD_country=RO";
+    "https://career.globant.com/api/sap/job-requisition?&page=1&country=RO";
   const scraper = new Scraper(url);
 
-  const res = await scraper.get_soup("HTML");
-  const items = res.findAll("li", { class: "job-tile" });
+  const res = await scraper.get_soup("JSON");
+  const items = res.jobRequisition;
 
   const jobs = [];
 
+  let job_id = 0;
+
   for (const item of items) {
-    const job_title = item.find("span", { class: "title" }).text.trim();
-    const job_link = "https://career.globant.com" + item.attrs["data-url"];
+    const job_title = item.jobTitle;
+    const job_link = "https://career.globant.com/?country=RO" + "#" + job_id;
     const country = "Romania";
-    const citys_obj = item
-      .find("div", { class: "location" })
-      .find("div")
-      .text.split(",");
 
-    const remote = get_jobtype(
-      item.find("div", { class: "location" }).find("div").text.toLowerCase()
-    );
-
-    let cities = [];
-    let counties = [];
-
-    for (const city_obj of citys_obj) {
-      const city_Name = city_obj.split(",")[0].trim();
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city_Name)
-      );
-
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
-    }
+    const remote = get_jobtype(item.location.toLowerCase());
 
     const job = generateJob(
       job_title,
       job_link,
       country,
-      cities,
-      counties,
+      "",
+      "",
       remote
     );
     jobs.push(job);
+    job_id++;
   }
   return jobs;
 };
