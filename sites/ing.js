@@ -5,54 +5,52 @@ const {
   getParams,
 } = require("peviitor_jsscraper");
 
+const { translate_city } = require("../utils.js");
+const { Counties } = require("../getTownAndCounty.js");
+
+const JSSoup = require("jssoup").default;
+
+const _counties = new Counties();
+
 const getJobs = async () => {
   const url =
-    "https://www.ing.jobs/global/careers/job-opportunities.htm?location_level_1=RO&start=0";
+    "https://careers.ing.com/en/search-jobs/results?ActiveFacetID=0&CurrentPage=1&RecordsPerPage=1000&TotalContentResults=&Distance=50&RadiusUnitType=1&Keywords=&Location=Romania&Latitude=46.00000&Longitude=25.00000&ShowRadius=False&IsPagination=False&CustomFacetName=&FacetTerm=&FacetType=0&SearchResultsModuleName=Search+Results&SearchFiltersModuleName=Search+Filters&SortCriteria=0&SortDirection=0&SearchType=1&LocationType=2&LocationPath=798549&OrganizationIds=2618&PostalCode=&ResultsType=0&fc=&fl=&fcf=&afc=&afl=&afcf=&TotalContentPages=NaN";
   const scraper = new Scraper(url);
-  const soup = await scraper.get_soup("HTML");
+  const res = await scraper.get_soup("JSON");
 
-  const totalJobs = parseInt(
-    soup
-      .find("div", { class: "careers-search-results" })
-      .findAll("h2")[2]
-      .findAll("strong")[1]
-      .text.trim()
-  );
+  const html = res.results;
 
-  const steps = Math.ceil(totalJobs / 50);
+  const soup = new JSSoup(html);
+
+  const elements = soup.findAll("li", {
+    class: "search-results-item",
+  });
 
   const jobs = [];
 
-  for (let step = 0; step < steps; step++) {
-    const url = `https://www.ing.jobs/global/careers/job-opportunities.htm?location_level_1=RO&start=${
-      step * 50
-    }`;
-    const s = new Scraper(url);
-    const soup = await s.get_soup("HTML");
+  for (const job of elements) {
+    const job_title = job.find("div", {
+      class: "search-results-item__content",
+    }).find("a").text;
+    const job_link =
+      "https://careers.ing.com" + job.find("a").attrs.href;
+    const city = translate_city(job.find("span", {
+      class: "job-location",
+    }).text.split(",")[0]);
+    
+    const { city: c, county: co } = await _counties.getCounties(city);
 
-    const results = soup
-      .find("div", { id: "vacancies" })
-      .findAll("div", { class: "careers-search-result" });
+    const job_element = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      c,
+      co
+    );
 
-    for (const job of results) {
-      const job_title = job.find("h3").text.trim();
-      const job_link =
-        "https://www.ing.jobs" + job.find("h3").find("a").attrs.href;
-      const city = "Bucuresti";
-      const county = "Bucuresti";
-
-      const job_element = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        city,
-        county
-      );
-
-      jobs.push(job_element);
-    }
+    jobs.push(job_element);
   }
-
+  console.log(jobs);
   return jobs;
 };
 
