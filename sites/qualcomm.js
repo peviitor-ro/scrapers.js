@@ -10,32 +10,29 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://qualcomm.dejobs.org/rom/jobs/";
+  const url =
+    "https://prod-search-api.jobsyn.org/api/v1/solr/search?location=Romania&page=1";
 
   const scraper = new Scraper(url);
-
+  scraper.config.headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "x-origin": "https://qualcomm.dejobs.org",
+    "User-Agent": "Mozilla/5.0",
+  };
   const jobs = [];
 
-  const soup = await scraper.get_soup("HTML");
+  const res = await scraper.get_soup("JSON");
 
-  const items = soup.findAll("li", { class: "direct_joblisting" });
+  const items = res.jobs;
 
   for (const item of items) {
-    const job_title = item.find("a").text.trim();
-    const job_link = "https://qualcomm.dejobs.org" + item.find("a").attrs.href;
-    const location = translate_city(
-      item.find("span", { class: "hiringPlace" }).text.split(",")[0].trim()
-    );
-
-    let counties = [];
-
+    const job_title = item.title_exact;
+    const job_link = "https://qualcomm.dejobs.org/" + item.guid;
+    const location = translate_city(item.city_exact);
     const { city: c, county: co } = await _counties.getCounties(location);
 
-    if (c) {
-      counties = [...new Set([...counties, ...co])];
-    }
-
-    const job = generateJob(job_title, job_link, "Romania", c, counties);
+    const job = generateJob(job_title, job_link, "Romania", c, co);
     jobs.push(job);
   }
   return jobs;
