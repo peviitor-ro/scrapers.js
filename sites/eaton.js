@@ -12,7 +12,7 @@ const _counties = new Counties();
 const getJobs = async () => {
   const jobs = [];
   let scraper = new Scraper(
-    "https://eaton.eightfold.ai/api/apply/v2/jobs/687220824677/jobs?domain=eaton.com"
+    "https://eaton.eightfold.ai/api/apply/v2/jobs/687221715862/jobs?domain=eaton.com"
   );
   let type = "JSON";
   let response = await scraper.get_soup(type);
