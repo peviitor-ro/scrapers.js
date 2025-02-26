@@ -30,21 +30,23 @@ const getJobs = async () => {
   const jobs = [];
 
   for (const job of items) {
-    const job_title = job.Title;
     const job_link = job.Url;
-    const country = job.Country;
+    if (job_link) {
+      const job_title = job.Title;
+      const country = job.Country;
 
-    const city = job.City ? job.City : "";
-    let job_element = { job_title, job_link, country, city };
+      const city = job.City ? job.City : "";
+      let job_element = { job_title, job_link, country, city };
 
-    if (city) {
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city)
-      );
-      job_element = generateJob(job_title, job_link, country, c, co);
+      if (city) {
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(city)
+        );
+        job_element = generateJob(job_title, job_link, country, c, co);
+      }
+
+      jobs.push(job_element);
     }
-
-    jobs.push(job_element);
   }
 
   return jobs;
