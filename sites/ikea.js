@@ -20,7 +20,10 @@ const getJobs = async () => {
   const items = soup.findAll("li", { class: "job-list__item" });
 
   for (const job of items) {
-    const job_title = job.find("h3").text.replace("&#xA;", "").trim();
+    const job_title = job
+      .find("span", { class: "job-list__title" })
+      .text.replace("&#xA;", "")
+      .trim();
     const job_link = "https://jobs.ikea.com" + job.find("a").attrs.href;
     const city = translate_city(
       job
