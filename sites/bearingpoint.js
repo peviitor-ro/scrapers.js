@@ -10,12 +10,13 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://bearingpoint-romania.hirehive.com";
+  const url =
+    "https://www.bearingpoint.com/en-ro/careers/open-roles/?country=RO";
   const jobs = [];
   const scraper = new Scraper(url);
   const type = "HTML";
   const res = await scraper.get_soup(type);
-  const elements = res.find("div", { class: "hh-jobs-openings" }).findAll("a");
+  const elements = res.find("div", { class: "jobs" }).findAll("a");
 
   for (const item of elements) {
     const job_title = item.find("h3").text.trim();
@@ -23,7 +24,7 @@ const getJobs = async () => {
       "https://bearingpoint-romania.hirehive.com" + item.attrs.href;
     let remote = [];
     const locations = item
-      .find("div", { class: "hh-job-row-location" })
+      .find("div", { class: "job-info" })
       .text.replace("and", ",")
       .trim()
       .split(",");
