@@ -20,7 +20,12 @@ const getJobs = async () => {
   for (const item of items) {
     const job_title = item.title;
     const job_link = "https://www.henkel.ro" + item.link;
-    let city = translate_city(item.location.split(",")[1].trim());
+
+    let city = "";
+    try{
+      city = translate_city(item.location.split(",")[1].trim());
+    } catch {}
+    
     let counties = [];
 
     const { city: c, county: co } = await _counties.getCounties(city);
