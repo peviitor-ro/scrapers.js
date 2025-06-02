@@ -25,34 +25,36 @@ const getJobs = async () => {
 
   const jobsElements = soup.jobs;
 
-  for (let index = 0; index < jobsElements.length; index++) {
-    const job_title = jobsElements[index].title_exact;
-    const job_link =
-      "https://cummins.jobs/" +
-      soup.filters.city[index].link.split("/")[2] +
-      "/" +
-      jobsElements[index].title_slug +
-      "/" +
-      jobsElements[index].guid +
-      "/job/";
+  try{
+    for (let index = 0; index < jobsElements.length; index++) {
+      const job_title = jobsElements[index].title_exact;
+      const job_link =
+        "https://cummins.jobs/" +
+        soup.filters.city[index].link.split("/")[2] +
+        "/" +
+        jobsElements[index].title_slug +
+        "/" +
+        jobsElements[index].guid +
+        "/job/";
 
-    const city = jobsElements[index].city_exact;
+      const city = jobsElements[index].city_exact;
 
-    let cities = [];
-    let counties = [];
+      let cities = [];
+      let counties = [];
 
-    const { city: c, county: co } = await _counties.getCounties(
-      translate_city(city[1])
-    );
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city[1])
+      );
 
-    if (c) {
-      cities.push(c);
-      counties = [...new Set([...counties, ...co])];
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job = generateJob(job_title, job_link, "Romania", cities, counties);
+      jobs.push(job);
     }
-
-    const job = generateJob(job_title, job_link, "Romania", cities, counties);
-    jobs.push(job);
-  }
+  } catch {}
 
   return jobs;
 };
