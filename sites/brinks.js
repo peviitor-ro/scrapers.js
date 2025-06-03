@@ -10,57 +10,46 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url =
-    "https://ro.brinks.com/ro/careers/career-positions?p_p_id=com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomDateRangeFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomAttributesFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomCategoryFilter=false&p_r_p_resetCur=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_cur=1";
+  const url = "https://cariere.brinks.ro/";
   const jobs = [];
-  let page = 1;
   const scraper = new Scraper(url);
 
   let res = await scraper.get_soup("HTML");
-  let items = res.findAll("div", { class: "card" });
+  let items = res
+    .find("div", {
+      class: "swiper-wrapper",
+    })
+    .findAll("div", {
+      class: "product",
+    });
+  let index = 0;
 
-  const pattern = /Locatii: (.*)./g;
+  for (const item of items) {
+    const job_title = item.find("h3").text.trim();
 
-  while (items.length > 0) {
-    for (const item of items) {
-      const job_title = item.find("h2").text.trim();
-      const job_link = item.find("a").attrs.href;
-      let cities = [];
-      let counties = [];
+    const job_link = url + `#${index}`;
+    let cities = [];
+    let counties = [];
 
-      const sentence = item
-        .findAll("p")
-        [item.findAll("p").length - 1].text.trim();
-      const matches = sentence.match(pattern);
-      if (matches) {
-        for (const match of matches) {
-          const citys_elem = match.split(":")[1].split(",");
-          for (const city of citys_elem) {
-            let edited_city = replace_char(city, ["(", ")", "."], "").replace(
-              "Ghiroda",
-              ""
-            );
-            const { city: c, county: co } = await _counties.getCounties(
-              translate_city(edited_city.trim())
-            );
-            if (c) {
-              cities.push(c);
-              counties = [...new Set([...counties, ...co])];
-            }
-          }
-        }
+    const sentence = item
+      .findAll("p")
+      [item.findAll("p").length - 1].text.trim()
+      .replace("Locatii: ", "")
+      .trim()
+      .split(",");
+
+    for (const location of sentence) {
+      const city = translate_city(replace_char(location.trim()));
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
       }
-      jobs.push(generateJob(job_title, job_link, "Romania", cities, counties));
     }
 
-    page++;
-    scraper.url =
-      "https://ro.brinks.com/ro/careers/career-positions?p_p_id=com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomDateRangeFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomAttributesFilter=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_enableCustomCategoryFilter=false&p_r_p_resetCur=false&_com_liferay_asset_publisher_web_portlet_AssetPublisherPortlet_INSTANCE_TXQMYdxBLTIC_cur=" +
-      page;
-    res = await scraper.get_soup("HTML");
-    items = res.findAll("div", { class: "card" });
+    jobs.push(generateJob(job_title, job_link, "Romania", cities, counties));
+    index++;
   }
-  console.log(jobs);
   return jobs;
 };
 
