@@ -10,49 +10,102 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url =
-    "https://jobsapi-internal.m-cloud.io/api/stjobbulk?organization=2242&limitkey=4A8B5EF8-AA98-4A8B-907D-C21723FE4C6B&facet=publish_to_cws:true&fields=id,ref,url,brand,title,level,open_date,department,sub_category,primary_city,primary_country,primary_category,addtnl_locations,language";
+  let url = "https://www-api.ibm.com/search/api/v2";
 
+  const data = {
+    appId: "careers",
+    scopes: ["careers", "careers2"],
+    query: { bool: { must: [] } },
+    post_filter: { term: { field_keyword_05: "Romania" } },
+    aggs: {
+      field_keyword_172: {
+        filter: { term: { field_keyword_05: "Romania" } },
+        aggs: {
+          field_keyword_17: { terms: { field: "field_keyword_17", size: 6 } },
+          field_keyword_17_count: {
+            cardinality: { field: "field_keyword_17" },
+          },
+        },
+      },
+      field_keyword_083: {
+        filter: { term: { field_keyword_05: "Romania" } },
+        aggs: {
+          field_keyword_08: { terms: { field: "field_keyword_08", size: 6 } },
+          field_keyword_08_count: {
+            cardinality: { field: "field_keyword_08" },
+          },
+        },
+      },
+      field_keyword_184: {
+        filter: { term: { field_keyword_05: "Romania" } },
+        aggs: {
+          field_keyword_18: { terms: { field: "field_keyword_18", size: 6 } },
+          field_keyword_18_count: {
+            cardinality: { field: "field_keyword_18" },
+          },
+        },
+      },
+      field_keyword_055: {
+        filter: { match_all: {} },
+        aggs: {
+          field_keyword_05: {
+            terms: { field: "field_keyword_05", size: 1000 },
+          },
+          field_keyword_05_count: {
+            cardinality: { field: "field_keyword_05" },
+          },
+        },
+      },
+    },
+    size: 100,
+    sort: [{ dcdate: "desc" }, { _score: "desc" }],
+    lang: "zz",
+    localeSelector: {},
+    sm: { query: "", lang: "zz" },
+    _source: [
+      "_id",
+      "title",
+      "url",
+      "description",
+      "language",
+      "entitled",
+      "field_keyword_17",
+      "field_keyword_08",
+      "field_keyword_18",
+      "field_keyword_19",
+    ],
+  };
   const jobs = [];
 
   const scraper = new Scraper(url);
-  const res = await scraper.get_soup("JSON");
+  const res = await scraper.post(data);
 
-  for (const job of res.queryResult) {
-    if (job.primary_country === "RO") {
-      const job_title = job.title;
-      const job_link = `https://careers.ibm.com/job/${job.id}`;
-      const cities = [];
-      cities.push(translate_city(job.primary_city.trim()));
+  for (const job of res.hits.hits) {
+    const job_title = job._source.title;
+    const job_link = job._source.url;
+    const location = job._source.field_keyword_19.split(",")[0].trim();
+    const remote = job._source.field_keyword_17.toLowerCase();
 
-      const aditional_locations = job.addtnl_locations;
+    let cities = [];
+    let counties = [];
 
-      if (aditional_locations) {
-        aditional_locations.forEach((location) => {
-          cities.push(location.addtnl_city);
-        });
-      }
-
-      let counties = [];
-
-      for (const city of cities) {
-        const { city: c, county: co } = await _counties.getCounties(city);
-
-        if (c) {
-          counties = [...new Set([...counties, ...co])];
-        }
-      }
-
-      const job_element = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        cities,
-        counties
-      );
-
-      jobs.push(job_element);
+    const city = translate_city(location);
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
     }
+
+    const job_element = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      cities,
+      counties,
+      remote
+    );
+
+    jobs.push(job_element);
   }
 
   return jobs;
