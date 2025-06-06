@@ -1,5 +1,6 @@
 const { translate_city } = require("../utils.js");
 const {
+  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -8,91 +9,51 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
-let data = {
-  multilineEnabled: false,
-  sortingSelection: {
-    sortBySelectionParam: "3",
-    ascendingSortingOrder: "false",
-  },
-  fieldData: {
-    fields: { KEYWORD: "", LOCATION: "", CATEGORY: "" },
-    valid: true,
-  },
-  filterSelectionParam: {
-    searchFilterSelections: [
-      { id: "POSTING_DATE", selectedValues: [] },
-      { id: "LOCATION", selectedValues: ["627270431240"] },
-      { id: "JOB_FIELD", selectedValues: [] },
-      { id: "JOB_TYPE", selectedValues: [] },
-      { id: "JOB_SCHEDULE", selectedValues: [] },
-      { id: "JOB_LEVEL", selectedValues: [] },
-    ],
-  },
-  advancedSearchFiltersSelectionParam: {
-    searchFilterSelections: [
-      { id: "ORGANIZATION", selectedValues: [] },
-      { id: "LOCATION", selectedValues: [] },
-      { id: "JOB_FIELD", selectedValues: [] },
-      { id: "JOB_NUMBER", selectedValues: [] },
-      { id: "URGENT_JOB", selectedValues: [] },
-      { id: "EMPLOYEE_STATUS", selectedValues: [] },
-      { id: "STUDY_LEVEL", selectedValues: [] },
-      { id: "WILL_TRAVEL", selectedValues: [] },
-      { id: "JOB_SHIFT", selectedValues: [] },
-    ],
-  },
-  pageNo: 1,
-};
-
 const getJobs = async () => {
-  const url =
-    "https://leoni.taleo.net/careersection/rest/jobboard/searchjobs?lang=ro&portal=101430233";
+  const url = "https://www.leoni.com/jobs-career/jobs-portal";
+  const scraper = new Scraper(url);
+  const res = await scraper.get_soup("HTML");
 
-  const headers = {
-    "Content-Type": "application/json",
-    "X-Requested-With": "XMLHttpRequest",
-    tz: "GMT+03:00",
-    tzname: "Europe/Bucharest",
-  };
   const jobs = [];
+  const jobElements = res.findAll("div", { class: "item-grid__tile" });
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: headers,
-    body: JSON.stringify(data),
-  }).then((res) => res.json());
-
-  const totalJobs = parseInt(res.pagingData.totalCount);
-
-  let step = 25;
-
-  let pages = Math.ceil(totalJobs / step);
-
-  for (let i = 1; i <= pages; i++) {
-    data.pageNo = i;
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(data),
-    }).then((res) => res.json());
-
-    const items = res.requisitionList;
-    for (const job of items) {
-      const job_title = job.column[0].trim();
-      const job_link = `https://leoni.taleo.net/careersection/ro_romania/jobdetail.ftl?job=${job.contestNo}&tz=GMT%2B03%3A00&tzname=Europe%2FBucharest`;
-      const city = translate_city(
-        job.column[2].replace(/[\["(.*)"\]]/g, "").split("-")[2]
-      );
-
+  for (const elem of jobElements) {
+    const country = elem
+      .find("p", { class: "icon--start-location_on" })
+      .text.split(",")[1]
+      .trim();
+    if (country === "Romania") {
+      const job_title = elem.find("h3").text.trim();
+      const job_link = elem.find("a").attrs.href;
+      const location = elem
+        .find("p", { class: "icon--start-location_on" })
+        .text.split(",")[0]
+        .trim()
+        .replace("Location:", "");
+      const remote = elem
+        .find("p", { class: "icon--start-work" })
+        .text.trim()
+        .replace("Type of job:", "")
+        .toLowerCase();
+      let cities = [];
+      let counties = [];
+      const city = translate_city(location);
       const { city: c, county: co } = await _counties.getCounties(city);
-
-      const job_element = generateJob(job_title, job_link, "Romania", c, co);
-
-      jobs.push(job_element);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+      const job = generateJob(
+        job_title,
+        job_link,
+        country,
+        cities,
+        counties,
+        remote
+      );
+      jobs.push(job);
     }
   }
-
   return jobs;
 };
 
