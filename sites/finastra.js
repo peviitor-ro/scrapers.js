@@ -11,26 +11,28 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   let url =
-    "https://careers.finastra.com/api/jobs?location=Romania&woe=12&stretchUnit=MILES&stretch=100&sortBy=relevance&descending=false&internal=false";
+    "https://finastra.wd3.myworkdayjobs.com/wday/cxs/finastra/FINC/jobs";
 
   const jobs = [];
 
+  const data = {
+    appliedFacets: { locations: ["8061b46e8417013734b3e7821f405d4e"] },
+    limit: 20,
+    offset: 0,
+    searchText: "",
+  };
+
   const scraper = new Scraper(url);
-  const res = await scraper.get_soup("JSON");
-  const jobsNumber = res.totalCount;
-  const pages = Math.ceil(jobsNumber / 10);
+  let res = await scraper.post(data)
+  const jobsNumber = res.total;
+  const pages = Math.ceil(jobsNumber / 20);
+  console.log(`Total jobs: ${jobsNumber}, Pages: ${pages}`);
 
   for (let i = 1; i <= pages; i++) {
-    let url = `https://careers.finastra.com/api/jobs?location=Romania&woe=12&stretchUnit=MILES&stretch=100&page=${i}&sortBy=relevance&descending=false&internal=false`;
-
-    const scraper = new Scraper(url);
-    const response = await scraper.get_soup("JSON");
-    const items = response.jobs;
-
-    for (const job of items) {
-      const job_title = job.data.title;
-      const job_link = `https://careers.finastra.com/jobs/${job.data.slug}?lang=en-us`;
-      const city = translate_city(job.data.city);
+    for (const job of res.jobPostings) {
+      const job_title = job.title;
+      const job_link = `https://finastra.wd3.myworkdayjobs.com/en-US/FINC${job.externalPath}`;
+      const city = translate_city(job.locationsText);
       let counties = [];
 
       const { city: c, county: co } = await _counties.getCounties(city);
@@ -48,6 +50,10 @@ const getJobs = async () => {
       );
 
       jobs.push(job_element);
+    }
+    if (i < pages) {
+      data.offset = i * 20;
+      res = await scraper.post(data);
     }
   }
   return jobs;

@@ -10,7 +10,7 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const get_headers = async () => {
-  const url = "https://www.maersk.com/careers/vacancies/assets/0bab2e7.js";
+  const url = "https://www.maersk.com/careers/vacancies/assets/a1bca4a.js";
   const scraper = new Scraper(url);
   const soup = await scraper.get_soup("HTML");
   const pattern = /var e="(.*)";return/;
@@ -64,4 +64,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+module.exports = { run, getJobs, getParams }; // this is needed for our unit test jobxX
