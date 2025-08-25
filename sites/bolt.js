@@ -44,7 +44,8 @@ const getJobs = async () => {
     let cities = [];
     let counties = [];
     const job_title = item.header.roleTitle;
-    const job_link = "https://bolt.eu/" + item.body.applyLinkProps.buttonHref;
+    const job_link =
+      "https://bolt.eu/" + item.body.applyLinkProps.linkProps.href;
 
     const city = translate_city(loc);
     const { city: c, county: co } = await _counties.getCounties(city);
