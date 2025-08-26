@@ -14,12 +14,30 @@ const getJobs = async () => {
 
   const data = {
     appId: "careers",
-    scopes: ["careers", "careers2"],
-    query: { bool: { must: [] } },
-    post_filter: { term: { field_keyword_05: "Romania" } },
+    scopes: ["careers2"],
+    query: {
+      bool: {
+        must: [
+          {
+            simple_query_string: {
+              query: "Romania",
+              fields: [
+                "keywords^1",
+                "body^1",
+                "url^2",
+                "description^2",
+                "h1s_content^2",
+                "title^3",
+                "field_text_01",
+              ],
+            },
+          },
+        ],
+      },
+    },
     aggs: {
       field_keyword_172: {
-        filter: { term: { field_keyword_05: "Romania" } },
+        filter: { match_all: {} },
         aggs: {
           field_keyword_17: { terms: { field: "field_keyword_17", size: 6 } },
           field_keyword_17_count: {
@@ -28,7 +46,7 @@ const getJobs = async () => {
         },
       },
       field_keyword_083: {
-        filter: { term: { field_keyword_05: "Romania" } },
+        filter: { match_all: {} },
         aggs: {
           field_keyword_08: { terms: { field: "field_keyword_08", size: 6 } },
           field_keyword_08_count: {
@@ -37,7 +55,7 @@ const getJobs = async () => {
         },
       },
       field_keyword_184: {
-        filter: { term: { field_keyword_05: "Romania" } },
+        filter: { match_all: {} },
         aggs: {
           field_keyword_18: { terms: { field: "field_keyword_18", size: 6 } },
           field_keyword_18_count: {
@@ -57,11 +75,11 @@ const getJobs = async () => {
         },
       },
     },
-    size: 100,
-    sort: [{ dcdate: "desc" }, { _score: "desc" }],
+    size: 30,
+    sort: [{ _score: "desc" }, { pageviews: "desc" }],
     lang: "zz",
     localeSelector: {},
-    sm: { query: "", lang: "zz" },
+    sm: { query: "Romania", lang: "zz" },
     _source: [
       "_id",
       "title",
