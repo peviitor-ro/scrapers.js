@@ -10,7 +10,7 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const get_headers = async () => {
-  const url = "https://www.maersk.com/careers/vacancies/assets/a1bca4a.js";
+  const url = "https://www.maersk.com/careers/vacancies/assets/b410c5f.js";
   const scraper = new Scraper(url);
   const soup = await scraper.get_soup("HTML");
   const pattern = /var e="(.*)";return/;
@@ -26,7 +26,7 @@ const getJobs = async () => {
   scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
   const type = "JSON";
   const res = await scraper.get_soup(type);
-  const items = res.results;
+  const items = res.Results;
   const jobs = [];
 
   for (const job of items) {
