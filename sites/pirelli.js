@@ -10,34 +10,40 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url =
-    "https://corporate.pirelli.com/corporate/en-ww/careers/work-with-us?region=europe&country=romania&function=all";
+  const url = "https://jobs.pirelli.com/services/recruiting/v1/jobs";
+  const data = {
+    locale: "en_GB",
+    pageNumber: 0,
+    sortBy: "",
+    keywords: "",
+    location: "",
+    facetFilters: { filter1: ["Romania"] },
+    brand: "",
+    skills: [],
+    categoryId: 0,
+    alertId: "",
+    rcmCandidateId: "",
+  };
   const scraper = new Scraper(url);
-  const type = "HTML";
-  const soup = await scraper.get_soup(type);
-  const items = soup.findAll("div", {
-    "data-country": "0c7d5ae44b2a0be9ebd7d6b9f7d60f20",
-  });
+  const res = await scraper.post(data);
+
+  const items = res.jobSearchResult;
+
   const jobs = [];
-  for (const item of items) {
-    const job_title = item.find("span").text.trim();
-    const city = translate_city(
-      item.find("span", { class: "loc" }).text.split(",")[0].trim()
+
+  for (const job of items) {
+    const job_title = job.response.urlTitle;
+    const job_link = `https://jobs.pirelli.com/job/${job.response.urlTitle}/${job.response.id}-${job.response.supportedLocales[0]}`;
+    const city = job.response.cust_location;
+
+    const { city: c, county: co } = await _counties.getCounties(
+      translate_city(city)
     );
-    const jumpTo = "#:~:text=";
-    const job_link = url + jumpTo + job_title;
+    const job_element = generateJob(job_title, job_link, "Romania", c, co);
 
-    let counties = [];
-
-    const { city: c, county: co } = await _counties.getCounties(city);
-
-    if (c) {
-      counties = [...new Set([...counties, ...co])];
-    }
-
-    const job = generateJob(job_title, job_link, "Romania", c, counties);
-    jobs.push(job);
+    jobs.push(job_element);
   }
+
   return jobs;
 };
 
