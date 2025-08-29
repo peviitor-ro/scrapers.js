@@ -11,30 +11,29 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://prod-search-api.jobsyn.org/api/v1/solr/search?location=Romania&page=1";
+    "https://careers.qualcomm.com/api/apply/v2/jobs?domain=qualcomm.com&profile=&query=romania&domain=qualcomm.com&sort_by=relevance";
 
   const scraper = new Scraper(url);
-  scraper.config.headers = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    "x-origin": "https://qualcomm.dejobs.org",
-    "User-Agent": "Mozilla/5.0",
-  };
   const jobs = [];
 
   const res = await scraper.get_soup("JSON");
 
-  const items = res.jobs;
+  const items = res.positions;
 
   for (const item of items) {
-    const job_title = item.title_exact;
-    const job_link = "https://qualcomm.dejobs.org/" + item.guid;
-    const location = translate_city(item.city_exact);
-    const { city: c, county: co } = await _counties.getCounties(location);
+    const country = item.location.split(", ").pop();
 
-    const job = generateJob(job_title, job_link, "Romania", c, co);
+    if (country.toLowerCase() !== "romania") continue;
+
+    const job_title = item.name;
+    const job_link = item.canonicalPositionUrl;
+    const city = translate_city(item.location.split(", ")[0].trim());
+    const county = (await _counties.getCounties(city)).county;
+
+    const job = generateJob(job_title, job_link, city, county);
     jobs.push(job);
   }
+
   return jobs;
 };
 
