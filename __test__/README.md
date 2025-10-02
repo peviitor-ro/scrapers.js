@@ -38,6 +38,9 @@ The script validates that each job object has:
 ```bash
 # Run validation on modified scrapers
 node __test__/runTest.js
+
+# Or use npm script
+npm run validate
 ```
 
 The script will:
