@@ -103,7 +103,7 @@ function validateJob(job, index) {
   const errors = [];
 
   // Required keys
-  const requiredKeys = ["job_title", "job_link", "country"];
+  const requiredKeys = ["job_title", "job_link", "company"];
   // Optional keys
   const optionalKeys = ["city", "county", "remote"];
   // All allowed keys

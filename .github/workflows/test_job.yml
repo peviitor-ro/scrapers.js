@@ -29,3 +29,5 @@ jobs:
           KNOX: ${{ secrets.KNOX }}
           COSTIN: ${{ secrets.COSTIN }}
         run: npm test
+      - name: Validate test results
+        run: npm run validate
