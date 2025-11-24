@@ -62,7 +62,8 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "Bolt";
-  const logo = "https://bolt.eu/bolt-logo-original-on-white.png";
+  const logo =
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Bolt_logo.png/1200px-Bolt_logo.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
