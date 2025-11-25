@@ -17,13 +17,13 @@ const getJobs = async () => {
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("HTML");
 
-  const elements = res.findAll("div", { class: "widget-block" });
+  const elements = res
+    .find("section", { id: "searchResults" })
+    .findAll("div", { class: "workday-job-result" });
 
   for (const elem of elements) {
     try {
-      const job_title = elem
-        .find("span", { class: "bw-global-list-h3" })
-        .text.trim();
+      const job_title = elem.find("a", { class: "link" }).text.trim();
       const job_link = elem
         .find("a", { class: "link" })
         .attrs.href.replace(/&amp;/g, "&");
