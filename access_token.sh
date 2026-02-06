@@ -1,6 +1,6 @@
 #!/bin/bash
 
-URL="https://api.peviitor.ro/v5/get_token/"
+URL="https://api.laurentiumarian.ro/get_token"
 EMAIL="laurentiumarianbaluta@gmail.com"
 
 
