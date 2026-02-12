@@ -34,7 +34,7 @@ const getJobs = async () => {
         .find("p", { class: "icon--start-work" })
         .text.trim()
         .replace("Type of job:", "")
-        .toLowerCase();
+        .toLowerCase().replace("onsite", "on-site");
       let cities = [];
       let counties = [];
       const city = translate_city(location);
