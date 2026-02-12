@@ -12,16 +12,16 @@ const _counties = new Counties();
 const getAditionalCity = async (url) => {
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("JSON");
-
-  const citys_elements = [
-    ...res.jobPostingInfo.additionalLocations,
-    res.jobPostingInfo.location,
-  ];
+  
+ const citys_elements = [
+   ...(res?.jobPostingInfo?.additionalLocations ?? []),
+   ...(res?.jobPostingInfo?.location ? [res.jobPostingInfo.location] : []),
+ ];
   let cities = [];
   let counties = [];
 
   const remote =
-    res.jobPostingInfo.remoteType === "Fully Remote" ? ["Remote"] : [];
+    res?.jobPostingInfo?.remoteType === "Fully Remote" ? ["Remote"] : [];
 
   for (const elem of citys_elements) {
     const separatorIndex = elem.indexOf("(");
@@ -40,7 +40,7 @@ const getAditionalCity = async (url) => {
 
 const getJobs = async () => {
   const url =
-    "https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/jobs";
+    "https://dynata.wd108.myworkdayjobs.com/wday/cxs/dynata/careers/jobs";
   const scraper = new Scraper(url);
   const additionalHeaders = {
     "Content-Type": "application/json",
@@ -92,7 +92,7 @@ const getJobs = async () => {
         jobs.push(generateJob(title, job_link, "Romania", c, co));
       } else {
         const jobName = externalPath.split("/")[3];
-        const url = `https://dynata.wd1.myworkdayjobs.com/wday/cxs/dynata/careers/job/${jobName}`;
+        const url = `https://dynata.wd108.myworkdayjobs.com/en-US/careers/job/${jobName}`;
         const { cities, counties, remote } = await getAditionalCity(url);
 
         jobs.push(
