@@ -14,13 +14,17 @@ const get_job_type = async (url) => {
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("HtML");
 
-  const job_type_elem = res
-    .find("div", { class: "job" })
-    .findAll("span", { class: "rtltextaligneligible" })[2]
-    .text.trim();
-  const job_type = get_jobtype(job_type_elem.toLowerCase());
+  try {
+    const job_type_elem = res
+      .find("div", { class: "job" })
+      .findAll("span", { class: "rtltextaligneligible" })[2]
+      .text.trim();
+    const job_type = get_jobtype(job_type_elem.toLowerCase());
 
-  return job_type;
+    return job_type;
+  } catch (error) {
+    return [];
+  }
 };
 
 const getJobs = async () => {
@@ -32,7 +36,7 @@ const getJobs = async () => {
 
   const step = 25;
   const total_jobs = parseInt(
-    res.find("span", { class: "paginationLabel" }).findAll("b")[1].text
+    res.find("span", { class: "paginationLabel" }).findAll("b")[1].text,
   );
 
   const rows = range(0, total_jobs, step);
@@ -55,7 +59,7 @@ const getJobs = async () => {
       const job_type = await get_job_type(job_link);
 
       const { city: c, county: co } = await _counties.getCounties(
-        translate_city(location)
+        translate_city(location),
       );
 
       if (c) {
@@ -68,7 +72,7 @@ const getJobs = async () => {
         "Romania",
         cities,
         counties,
-        job_type
+        job_type,
       );
       jobs.push(job);
     }
