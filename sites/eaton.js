@@ -11,24 +11,28 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const jobs = [];
-  let scraper = new Scraper(
-    "https://eaton.eightfold.ai/api/apply/v2/jobs/687221715862/jobs?domain=eaton.com"
-  );
+  url = "https://eaton.eightfold.ai/api/pcsx/search?domain=eaton.com&query=&location=Romania&start=0&filter_distance=80&filter_include_remote=1";
+  let scraper = new Scraper(url);
   let type = "JSON";
   let response = await scraper.get_soup(type);
-  const pages = Math.ceil(response.count / 10);
+  const pages = Math.ceil(response.data.count / 10);
 
   const fetchPages = async () => {
     const jobs = [];
     for (let page = 0; page < pages; page += 10) {
+      
+      const jobspage = response.data.positions.map((job) => {
+        return {
+          name: job.name,
+          canonicalPositionUrl: job.positionUrl,
+          locations: job.locations,
+        };
+      });
+      jobs.push(...jobspage);
       scraper = new Scraper(
-        `https://eaton.eightfold.ai/api/apply/v2/jobs?start=${page}&num=${
-          page + 10
-        }&location=romania`
+        `https://eaton.eightfold.ai/api/pcsx/search?domain=eaton.com&query=&location=Romania&start=${page}&filter_distance=80&filter_include_remote=1`,
       );
       response = await scraper.get_soup(type);
-      const jobspage = response.positions;
-      jobs.push(...jobspage);
     }
     return jobs;
   };
@@ -37,7 +41,7 @@ const getJobs = async () => {
 
   for (const job of elements) {
     const job_title = job.name;
-    const job_link = job.canonicalPositionUrl;
+    const job_link = `https://eaton.eightfold.ai${job.canonicalPositionUrl}`;
     let city;
     let county;
     const locations = job.locations;
