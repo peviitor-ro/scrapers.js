@@ -14,8 +14,12 @@ const getJobs = async () => {
     "https://careers.hilti.group/ro/locuri-de-munca/?search=&country=20000441&pagesize=100#results";
 
   const jobs = [];
-
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/",
+  };
   const scraper = new Scraper(url);
+  scraper.config.headers = { ...scraper.config.headers, ...headers };
   const res = await scraper.get_soup("HTML");
 
   const items = res.findAll("div", { class: "card-job" });
