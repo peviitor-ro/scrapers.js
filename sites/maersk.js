@@ -10,17 +10,18 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const get_headers = async () => {
-  const url = "https://www.maersk.com/careers/vacancies/assets/b410c5f.js";
+  const url = "https://www.maersk.com/careers/_nuxt/BOKWt41Y.js";
   const scraper = new Scraper(url);
   const soup = await scraper.get_soup("HTML");
-  const pattern = /var e="(.*)";return/;
-  const match = soup.text.match(pattern);
-  return { "Consumer-Key": match[1] };
+  const pattern = /t\s*=\s*"([^"]+)"/g;
+  const match = soup.text.match(pattern)
+  const lastMatch = match[3].match(/"([^"]+)"/);
+  return { "Consumer-Key": lastMatch[1] };
 };
 
 const getJobs = async () => {
   const url =
-    "https://api.maersk.com/careers/vacancies?region=&category=&country=Romania&searchInput=&offset=0&limit=48&language=EN";
+    "https://api.maersk.com/careers/vacancies?country=Romania&isLocationDenied=true&limit=24&offset=0&language=EN&currentPage=1&resultcurrentPage=1&isResultPage=false&isRadiusDisabled=true&distance=0";
   const scraper = new Scraper(url);
   const additionalHeaders = await get_headers();
   scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
