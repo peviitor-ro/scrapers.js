@@ -12,37 +12,42 @@ const _counties = new Counties();
 const getJobs = async () => {
   const url = "https://www.aeratechnology.com/careers";
   const scraper = new Scraper(url);
+  scraper.config.headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  };
   const res = await scraper.get_soup("HTML");
 
-  const items = res.find("div", { id: "open-roles" }).findAll("li");
+  const items = res.find("section", { id: "open-roles" }).findAll("li");
 
   const jobs = [];
 
   for (const item of items) {
-    const locatin = item.find("p", { class: "_1RSuWi9-4R" }).text.split(",");
+    const locatin = item
+      .find("p", { class: "rolesItem__location" })
+      .text.split(",");
     const country = locatin[locatin.length - 1].trim();
 
-    if (country !== "Romania") {
-      continue;
+    if (country === "Romania") {
+      const job_title = item.find("h3").text.trim();
+      const job_link = item.find("a").attrs.href;
+      const city = locatin[0].trim();
+
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city),
+      );
+
+      let cities = [];
+      let counties = [];
+
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job = generateJob(job_title, job_link, country, cities, counties);
+      jobs.push(job);
     }
-
-    let cities = [];
-    let counties = [];
-    const job_title = item.find("h3").text.trim();
-    const job_link = item.find("a").attrs.href;
-
-    const city = locatin[0].trim();
-
-    const { city: c, county: co } = await _counties.getCounties(
-      translate_city(city)
-    );
-    if (c) {
-      cities.push(c);
-      counties = [...new Set([...counties, ...co])];
-    }
-
-    const job = generateJob(job_title, job_link, country, cities, counties);
-    jobs.push(job);
   }
 
   return jobs;
@@ -54,7 +59,11 @@ const run = async () => {
     "https://lever-client-logos.s3.amazonaws.com/dfa07fbc-23b8-4677-9df5-6bb3d39f07db-1511999864878.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+  if (jobs.length > 0) {
+    postApiPeViitor(jobs, params);
+  } else {
+    console.log(`No jobs found for ${company} in Romania.`);
+  }
 };
 
 if (require.main === module) {

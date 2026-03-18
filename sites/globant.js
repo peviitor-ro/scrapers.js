@@ -12,9 +12,8 @@ const _counties = new Counties();
 const getJobs = async () => {
   const url =
     "https://career.globant.com/api/sap/job-requisition?&page=1&country=RO";
-  const scraper = new Scraper(url);
 
-  const res = await scraper.get_soup("JSON");
+  const res = await fetch(url).then((response) => response.json());
   const items = res.jobRequisition;
 
   const jobs = [];
@@ -28,14 +27,7 @@ const getJobs = async () => {
 
     const remote = get_jobtype(item.location.toLowerCase());
 
-    const job = generateJob(
-      job_title,
-      job_link,
-      country,
-      "",
-      "",
-      remote
-    );
+    const job = generateJob(job_title, job_link, country, "", "", remote);
     jobs.push(job);
     job_id++;
   }
