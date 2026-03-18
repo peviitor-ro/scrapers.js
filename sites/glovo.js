@@ -1,54 +1,88 @@
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
 const { Counties } = require("../getTownAndCounty.js");
+const axios = require("axios");
+const querystring = require("querystring");
+const Jssoup = require("jssoup").default;
 
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url = "https://boards-api.greenhouse.io/v1/boards/glovo/jobs";
-
+  const url = "https://careers.glovoapp.com/wp-admin/admin-ajax.php";
   const jobs = [];
+  let page = 1;
+  let hasMore = true;
 
-  const scraper = new Scraper(url);
-  const res = await scraper.get_soup("JSON");
+  while (hasMore) {
+    const data = querystring.stringify({
+      action: "glovo_filter_jobs",
+      page: page,
+      "countries[]": "Romania",
+    });
 
-  for (const job of res.jobs) {
-    const country = job.location.name;
-    if (country.includes("Romania")) {
-      const job_title = job.title;
-      const job_link = job.absolute_url;
-      const locations = job.location.name.split(",");
-      const cities = [];
-      let counties = [];
+    try {
+      const response = await axios.post(url, data);
 
-      for (const location of locations) {
-        const city = translate_city(location);
+      if (response.data && response.data.success && response.data.data.html) {
+        const soup = new Jssoup(response.data.data.html);
+        const jobCards = soup.findAll("div", "career-card");
 
-        const { city: c, county: co } = await _counties.getCounties(city);
-
-        if (c) {
-          cities.push(c);
-          counties = [...new Set([...counties, ...co])];
+        if (jobCards.length === 0) {
+          hasMore = false;
+          break;
         }
+
+        for (const card of jobCards) {
+          const titleElem = card.find("h4", "job-title");
+          const linkElem = card.find("div", "apply-job-btn").find("a");
+          const locationElem = card
+            .find("ul", "job-address")
+            .find("li")
+            .find("span");
+
+          if (titleElem && linkElem && locationElem) {
+            const job_title = titleElem.text.trim();
+            const job_link = linkElem.attrs.href;
+            const locationText = locationElem.text.trim(); // "Bucharest, Romania"
+
+            const cities = [];
+            let counties = [];
+
+            // Extract city
+            const cityRaw = locationText.split(",")[0].trim();
+            const city = translate_city(cityRaw);
+
+            const { city: c, county: co } = await _counties.getCounties(city);
+
+            if (c) {
+              cities.push(c);
+              counties = [...new Set([...counties, ...co])];
+            }
+
+            const job_element = generateJob(
+              job_title,
+              job_link,
+              "Romania",
+              cities,
+              counties,
+            );
+
+            jobs.push(job_element);
+          }
+        }
+        page++;
+      } else {
+        hasMore = false;
       }
-
-      const job_element = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        cities,
-        counties
-      );
-
-      jobs.push(job_element);
+    } catch (error) {
+      console.error(error);
+      hasMore = false;
     }
   }
-
   return jobs;
 };
 

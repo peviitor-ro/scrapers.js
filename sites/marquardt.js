@@ -40,7 +40,7 @@ const data = {
   searchText: "",
   cultureName: "en-US",
   states: [],
-  countryCodes: ["ro"],
+  countryCodes: [],
   cities: [],
   placeID: "",
   radius: null,
@@ -54,31 +54,37 @@ const getJobs = async () => {
   const token = await getToken();
   const apiurl = "https://uk.api.csod.com/rec-job-search/external/jobs";
 
-  const res = await fetch(apiurl, {
+  const response = await fetch(apiurl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(data),
-  }).then((res) => res.json());
+  });
+
+  const res = await response.json();
 
   const items = res.data.requisitions;
 
   const jobs = [];
 
   for (const job of items) {
-    const job_title = job.displayJobTitle;
-    const job_link = `https://marquardt-group.csod.com/ux/ats/careersite/5/home/requisition/${job.requisitionId}?c=marquardt-group`;
-    let city = job.locations[0].city || "Sibiu";
+    const roLocation = job.locations.find((loc) => loc.country === "RO");
 
-    const { city: c, county: co } = await _counties.getCounties(
-      translate_city(city.trim())
-    );
+    if (roLocation) {
+      const job_title = job.displayJobTitle;
+      const job_link = `https://marquardt-group.csod.com/ux/ats/careersite/5/home/requisition/${job.requisitionId}?c=marquardt-group`;
+      let city = roLocation.city || "Sibiu";
 
-    const job_element = generateJob(job_title, job_link, "Romania", c, co);
+      const { city: c, county: co } = await _counties.getCounties(
+        translate_city(city.trim()),
+      );
 
-    jobs.push(job_element);
+      const job_element = generateJob(job_title, job_link, "Romania", c, co);
+
+      jobs.push(job_element);
+    }
   }
 
   return jobs;
@@ -90,7 +96,12 @@ const run = async () => {
     "https://www.marquardt.ro/wp-content/uploads/2019/06/logo-mairon.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+
+  if (jobs.length > 0) {
+    postApiPeViitor(jobs, params);
+  } else {
+    console.log(`No jobs found for ${company}.`);
+  }
 };
 
 if (require.main === module) {

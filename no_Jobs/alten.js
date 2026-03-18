@@ -1,54 +1,96 @@
+const https = require("https");
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
-  range,
 } = require("peviitor_jsscraper");
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
+const BASE_URL = "https://careers.altenromania.ro";
+const REQUEST_TIMEOUT = 15000;
+
+const requestJson = (url) =>
+  new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      {
+        rejectUnauthorized: false,
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "application/json, text/plain, */*",
+        },
+      },
+      (res) => {
+        let body = "";
+
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(body));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+    );
+
+    req.setTimeout(REQUEST_TIMEOUT, () => {
+      req.destroy(new Error(`Request timed out for ${url}`));
+    });
+
+    req.on("error", reject);
+  });
+
+const getPageData = async (page) => {
+  const response = await requestJson(`${BASE_URL}/jds/${page}`);
+  return JSON.parse(response.success?.message || "{}");
+};
 
 const getJobs = async () => {
-  let url = "https://careers.altenromania.ro/jds/1";
-  const scraper = new Scraper(url);
-  let res = await scraper.get_soup("JSON");
+  let firstPage;
 
-  const pages = JSON.parse(res.success.message).pager.pageCount;
-  const items = [];
-  const jobs = [];
-
-  for (const i of range(1, pages, 1)) {
-    url = "https://careers.altenromania.ro/jds/" + i;
-    scraper.url = url;
-    const res = await scraper.get_soup("JSON");
-    items.push(...JSON.parse(res.success.message).recordList);
+  try {
+    firstPage = await getPageData(1);
+  } catch {
+    return [];
   }
 
-  for (const job of items) {
-    const job_title = job.titlu;
-    const job_link = "https://careers.altenromania.ro/job/" + job.id;
-    const city = job.locatie;
-    const country = "Romania";
-    const remote = [];
+  const jobs = [];
+  const pages = firstPage.pager?.pageCount || 0;
 
-    const job_obj = generateJob(job_title, job_link, country);
+  for (let page = 1; page <= pages; page += 1) {
+    const pageData = page === 1 ? firstPage : await getPageData(page);
 
-    if (city.includes("Remote")) {
-      remote.push("Remote");
-      job_obj.remote = remote;
-    } else {
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city)
-      );
-      if (c) {
-        job_obj.city = c;
-        job_obj.county = co;
+    for (const job of pageData.recordList || []) {
+      const location = (job.locatie || "").trim();
+      const remote = location.includes("Remote") ? ["remote"] : [];
+      let city = [];
+      let county = [];
+
+      if (remote.length === 0 && location) {
+        const locationData = await _counties.getCounties(
+          translate_city(location),
+        );
+        city = locationData.city || location;
+        county = locationData.county || [];
       }
-    }
 
-    jobs.push(job_obj);
+      jobs.push(
+        generateJob(
+          job.titlu,
+          `${BASE_URL}/job/${job.id}`,
+          "Romania",
+          city,
+          county,
+          remote,
+        ),
+      );
+    }
   }
 
   return jobs;
@@ -58,8 +100,14 @@ const run = async () => {
   const company = "Alten";
   const logo = "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
   const jobs = await getJobs();
+
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}.`);
+    return;
+  }
+
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+  await postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {
@@ -67,74 +115,3 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams };
-// const { Scraper, postApiPeViitor } = require("peviitor_jsscraper");
-// const { getTownAndCounty } = require("../getTownAndCounty.js");
-// const { translate_city } = require("../utils.js");
-
-// const generateJob = (job_title, job_link, remote, city, county) => ({
-//   job_title,
-//   job_link,
-//   country: "Romania",
-//   city,
-//   county,
-//   remote,
-// });
-
-// const getJobs = async () => {
-//   let url = "https://careers.altenromania.ro/jds/1";
-//   const jobs = [];
-
-//   const scraper = new Scraper(url);
-//   let res = await scraper.get_soup("JSON");
-
-//   const pages = JSON.parse(res.success.message).pager.pageCount;
-
-//   for (let i = 1; i <= pages; i++) {
-//     const jobs_elements = JSON.parse(res.success.message).recordList;
-//     jobs_elements.forEach((job) => {
-//       const job_title = job.titlu;
-//       const job_link = "https://careers.altenromania.ro/job/" + job.id;
-//       const city = job.locatie;
-//       const remote = [];
-
-//       if (city.includes("Remote")) {
-//         remote.push("Remote");
-//         jobs.push(generateJob(job_title, job_link, remote));
-//       } else {
-//         const { foudedTown, county } = getTownAndCounty(
-//           translate_city(city.toLowerCase())
-//         );
-//         jobs.push(generateJob(job_title, job_link, remote, foudedTown, county));
-//       }
-//     });
-//     url = "https://careers.altenromania.ro/jds/" + (i + 1);
-//     scraper.url = url;
-//     res = await scraper.get_soup("JSON");
-//   }
-
-//   return jobs;
-// };
-
-// const getParams = () => {
-//   const company = "Alten";
-//   const logo = "https://careers.altenromania.ro/assets/img/svgs/logo.svg";
-//   const apikey = process.env.APIKEY;
-//   const params = {
-//     company,
-//     logo,
-//     apikey,
-//   };
-//   return params;
-// };
-
-// const run = async () => {
-//   const jobs = await getJobs();
-//   const params = getParams();
-//   postApiPeViitor(jobs, params);
-// };
-
-// if (require.main === module) {
-//   run();
-// }
-
-// module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
