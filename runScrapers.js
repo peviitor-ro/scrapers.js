@@ -1,79 +1,277 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
-const childProcess = require("child_process");
-const axios = require("axios");
+const { spawnSync } = require("child_process");
 
-const exclude = ["michelin.js"];
+const EXCLUDE = new Set(["main.js"]);
+const SITES_DIR = path.resolve(__dirname, "sites");
+const REPO_ROOT = __dirname;
+const REPAIR_TIMEOUT_SECONDS = Number.parseInt(
+  process.env.OPENCODE_REPAIR_TIMEOUT || "900",
+  10,
+);
+const MAX_LOG_LENGTH = 4000;
 
-function runFile(file, version) {
-  let command = "";
-  switch (version) {
-    case "old":
-      command = `node sites/${file}`;
-      break;
-    case "new":
-      command = `node sites/${file}`;
-      break;
-    default:
-      console.log("Invalid version");
-      return;
-  }
-  return new Promise((resolve) => {
-    childProcess.exec(command, (err, stdout, stderr) => {
-      if (stderr) {
-        console.log("Error scraping " + file);
-        console.log(stderr);
-      }
-      if (stdout) {
-        console.log("Success scraping " + file);
-        resolve();
-      } else {
-        console.log("No jobs available for " + file);
-        resolve();
-      }
-    });
-  });
-}
-
-const getSites = () => {
-  const directoryPath = "sites";
-  const newSites = [];
-  const oldSites = [];
-  fs.readdirSync(directoryPath).forEach((file) => {
-    const filePath = path.join(directoryPath, file);
-    if (fs.statSync(filePath).isFile() && path.extname(filePath) === ".js") {
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const basename = path.basename(filePath);
-      if (fileContent.includes("getParams")) {
-        // a string that we're 99% sure it's included in new sites but not on old ones
-        newSites.push(basename);
-      } else oldSites.push(basename);
-    }
+function commandExists(command) {
+  const action = spawnSync(command, ["--version"], {
+    encoding: "utf8",
   });
 
-  return [oldSites, newSites];
-};
-
-const runOldSites = async (oldSites) => {
-  for (let i = 0; i < oldSites.length; i += 1) {
-    if (!exclude.includes(oldSites[i])) {
-      await runFile(oldSites[i], "old");
-    }
-  }
-};
-
-const runNewSites = async (newSites) => {
-  for (let i = 0; i < newSites.length; i += 1) {
-    if (!exclude.includes(newSites[i])) {
-      await runFile(newSites[i], "new");
-    }
-  }
-};
-
-async function run() {
-  const [oldSites, newSites] = getSites();
-  await runOldSites(oldSites);
-  await runNewSites(newSites);
+  return !action.error;
 }
 
-run();
+function snapshotSiblingFiles(scriptPath) {
+  return new Set(
+    fs.readdirSync(path.dirname(scriptPath)).filter((name) => {
+      const siblingPath = path.join(path.dirname(scriptPath), name);
+      const stats = fs.lstatSync(siblingPath);
+      return stats.isFile() || stats.isSymbolicLink();
+    }),
+  );
+}
+
+function cleanupCreatedSiblingFiles(scriptPath, existingFiles) {
+  const currentFiles = snapshotSiblingFiles(scriptPath);
+  const createdFiles = [...currentFiles]
+    .filter((fileName) => !existingFiles.has(fileName))
+    .sort();
+
+  for (const fileName of createdFiles) {
+    const createdFile = path.join(path.dirname(scriptPath), fileName);
+    if (createdFile === scriptPath) {
+      continue;
+    }
+
+    fs.rmSync(createdFile, { force: true });
+    console.log(`Deleted extra file ${path.basename(createdFile)}`);
+  }
+}
+
+function truncateOutput(content, limit = MAX_LOG_LENGTH) {
+  if (!content) {
+    return "No output captured.";
+  }
+
+  const trimmed = String(content).trim();
+  if (trimmed.length <= limit) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, limit)}\n...[truncated]`;
+}
+
+function normalizeActionResult(action) {
+  const stdout = action.stdout || "";
+  const stderr = action.stderr || "";
+  const timedOut = action.error && action.error.code === "ETIMEDOUT";
+
+  return {
+    stdout,
+    stderr,
+    timedOut,
+    returncode: timedOut ? 1 : action.status ?? 1,
+  };
+}
+
+function runScraper(scriptPath) {
+  return normalizeActionResult(
+    spawnSync(process.execPath, [scriptPath], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }),
+  );
+}
+
+function getScriptPath(scraperName) {
+  const scriptName = scraperName.endsWith(".js")
+    ? scraperName
+    : `${scraperName}.js`;
+  const scriptPath = path.join(SITES_DIR, scriptName);
+
+  if (EXCLUDE.has(scriptName)) {
+    throw new Error(`${scriptName} cannot be tested manually.`);
+  }
+
+  if (!fs.existsSync(scriptPath) || !fs.statSync(scriptPath).isFile()) {
+    throw new Error(`Scraper not found: ${scriptName}`);
+  }
+
+  return scriptPath;
+}
+
+function repairScraperWithOpencode(scriptPath, failedAction) {
+  if (!commandExists("opencode")) {
+    console.log(
+      `OpenCode is not installed. Skipping auto-repair for ${path.basename(
+        scriptPath,
+      )}.`,
+    );
+    return false;
+  }
+
+  const stderrOutput = truncateOutput(failedAction.stderr);
+  const stdoutOutput = truncateOutput(failedAction.stdout);
+  const relativeScriptPath = path.relative(REPO_ROOT, scriptPath);
+  const prompt = `Fix the failing scraper \`${relativeScriptPath}\`. Use the attached context file for the traceback and rerun the scraper until it exits successfully.`;
+
+  const repairContext = `Scraper: ${relativeScriptPath}
+Run command: ${process.execPath} ${relativeScriptPath}
+
+Requirements:
+- Fix only what is needed for this scraper to run correctly.
+- Preserve the existing scraper behavior and output schema.
+- Keep changes focused; avoid unrelated edits.
+- Re-run the scraper after your fix and stop only when it exits successfully.
+
+Captured stderr:
+\`\`\`
+${stderrOutput}
+\`\`\`
+
+Captured stdout:
+\`\`\`
+${stdoutOutput}
+\`\`\``;
+
+  let contextFilePath;
+
+  try {
+    console.log(`Starting OpenCode repair for ${path.basename(scriptPath)}...`);
+
+    contextFilePath = path.join(
+      os.tmpdir(),
+      `${path.basename(
+        scriptPath,
+        ".js",
+      )}_${Date.now()}_opencode_repair_context.md`,
+    );
+    fs.writeFileSync(contextFilePath, repairContext, "utf8");
+
+    const action = normalizeActionResult(
+      spawnSync(
+        "opencode",
+        [
+          "run",
+          "--dir",
+          REPO_ROOT,
+          "-f",
+          scriptPath,
+          "-f",
+          contextFilePath,
+          "--",
+          prompt,
+        ],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf8",
+          timeout: REPAIR_TIMEOUT_SECONDS * 1000,
+        },
+      ),
+    );
+
+    if (action.timedOut) {
+      console.log(
+        `OpenCode repair timed out for ${path.basename(scriptPath)}.`,
+      );
+      return false;
+    }
+
+    if (action.returncode !== 0) {
+      const opencodeError = truncateOutput(action.stderr || action.stdout);
+      console.log(`OpenCode could not repair ${path.basename(scriptPath)}.`);
+      console.log(opencodeError);
+      return false;
+    }
+  } finally {
+    if (contextFilePath && fs.existsSync(contextFilePath)) {
+      fs.rmSync(contextFilePath, { force: true });
+    }
+  }
+
+  console.log(`OpenCode repair finished for ${path.basename(scriptPath)}.`);
+  return true;
+}
+
+function testScraperRepair(scraperName) {
+  let scriptPath;
+
+  try {
+    scriptPath = getScriptPath(scraperName);
+  } catch (error) {
+    console.log(error.message);
+    return false;
+  }
+
+  let existingFiles = snapshotSiblingFiles(scriptPath);
+  let action = runScraper(scriptPath);
+  cleanupCreatedSiblingFiles(scriptPath, existingFiles);
+
+  if (action.returncode === 0) {
+    console.log(`Scraper ${path.basename(scriptPath)} already works.`);
+    return true;
+  }
+
+  console.log(`Error scraping ${path.basename(scriptPath)}`);
+  console.log(truncateOutput(action.stderr));
+
+  if (!repairScraperWithOpencode(scriptPath, action)) {
+    return false;
+  }
+
+  existingFiles = snapshotSiblingFiles(scriptPath);
+  action = runScraper(scriptPath);
+  cleanupCreatedSiblingFiles(scriptPath, existingFiles);
+
+  if (action.returncode === 0) {
+    console.log(
+      `Success scraping after auto-repair ${path.basename(scriptPath)}`,
+    );
+    return true;
+  }
+
+  console.log(`Auto-repair did not fix ${path.basename(scriptPath)}`);
+  console.log(truncateOutput(action.stderr));
+  return false;
+}
+
+function main() {
+  for (const site of fs.readdirSync(SITES_DIR).sort()) {
+    if (!site.endsWith(".js") || EXCLUDE.has(site)) {
+      continue;
+    }
+
+    const scriptPath = path.join(SITES_DIR, site);
+    const existingFiles = snapshotSiblingFiles(scriptPath);
+    const action = runScraper(scriptPath);
+    cleanupCreatedSiblingFiles(scriptPath, existingFiles);
+
+    if (action.returncode === 0) {
+      console.log(`Success scraping ${site}`);
+      continue;
+    }
+
+    console.log(`Error scraping ${site}`);
+    console.log(truncateOutput(action.stderr));
+
+    if (!repairScraperWithOpencode(scriptPath, action)) {
+      continue;
+    }
+
+    const repairedExistingFiles = snapshotSiblingFiles(scriptPath);
+    const repairedAction = runScraper(scriptPath);
+    cleanupCreatedSiblingFiles(scriptPath, repairedExistingFiles);
+
+    if (repairedAction.returncode === 0) {
+      console.log(`Success scraping after auto-repair ${site}`);
+    } else {
+      console.log(`Auto-repair did not fix ${site}`);
+      console.log(truncateOutput(repairedAction.stderr));
+    }
+  }
+}
+
+if (process.argv.length > 2) {
+  testScraperRepair(process.argv[2]);
+} else {
+  main();
+}
