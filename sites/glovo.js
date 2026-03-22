@@ -25,7 +25,13 @@ const getJobs = async () => {
     });
 
     try {
-      const response = await axios.post(url, data);
+      const response = await axios.post(url, data, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+        timeout: 10000,
+      });
 
       if (response.data && response.data.success && response.data.data.html) {
         const soup = new Jssoup(response.data.data.html);
@@ -79,7 +85,7 @@ const getJobs = async () => {
         hasMore = false;
       }
     } catch (error) {
-      console.error(error);
+      console.error(`Error fetching jobs: ${error.message}`);
       hasMore = false;
     }
   }
@@ -92,7 +98,12 @@ const run = async () => {
     "https://upload.wikimedia.org/wikipedia/en/thumb/8/82/Glovo_logo.svg/317px-Glovo_logo.svg.png?20220725155704";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+
+  if (jobs.length > 0) {
+    postApiPeViitor(jobs, params);
+  } else {
+    console.log(`Joblist for ${company} is empty. Skipping API post.`);
+  }
 };
 
 if (require.main === module) {

@@ -10,69 +10,69 @@ const axios = require("axios");
 
 const _counties = new Counties();
 
-const getHtml = async (url) => {
-  let config = {
-    method: "get",
-    maxBodyLength: Infinity,
-    url: url, 
-    headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Sec-Fetch-Site": "none",
-      Cookie:
-        "__cf_bm=60xVmnogx685t_97xoSNw7lUESa_AVx3nVw.vvV4xjc-1770950658.3438287-1.0.1.1-UBbIUD_Mb3.4WQywoj_rHm_c9eKdeXhO2jmPe9jkas9nGUt2lcSgGi.T6.BsZb_Ua.nLSQ2bQsy8Ul5sxxx2iL8cBFsMTR8BEAqonAgH4xQ.sAi938oAj.3Bm_gJmhuFQ2t2aeUuxWFazPdCOTGxuw; _jsuid=701778805; cf_clearance=zdICjR6QKlIwz3f_SZdRbqA18RPfqDs.CcB4fbY4Www-1770950656-1.2.1.1-lyM0oEhjiqAr6YWrrA1u2HyDfCtfyb1jFvXHpGCgR3nPu4uQ7U6YrjOpDr0LhzU8Io3F1D3Fqb55X56emO2x95f5kpt7TCqTRHv8xFlKE0qfKAGUdDRN5LHJ0X1nAvwvaw7eepfx1YOb6GW0UR0n8gbT2QfKc3gTPyQbBNlo1syO0Mdy8niiOua6bZuG6vLvB8tmZM0elJGOOHYrNveY3bjEg00ROZgDSYbSI4KzzyQ; jobs_search_type=talemetry; referral_source_id_recent=0; tid=x_b945015c-306a-4bda-9307-552b9b930d45; tsid=x_e542a4c4-a33b-4b0a-a678-97ca91fbbdb5; __cf_bm=_DwsO3k9gSpEDuQOOzeTV.yM4uvlpSPPk206Why2gq4-1770950763.4146051-1.0.1.1-nKaO.1bOr_OxyVW2roYbTEXFGN76L4Tvw7lVxICckYNP6udMSVnYoSlozkJzKGdQPJygI974QDIZBf14XxcditCH3qVkO1xCVvFp_Zp2V9QphdStxH.Sgj1GCh6zf8yRbRXW2li8qBb6xdc_I0odhQ; jobs_search_type=talemetry; referral_source_id_recent=0; tid=x_d8795c7d-f1bd-425c-afe1-2edd267bc768",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Sec-Fetch-Mode": "navigate",
-      Host: "ness-usa.ttcportals.com",
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
-      "Accept-Language": "en-GB,en;q=0.9",
-      "Sec-Fetch-Dest": "document",
-      Connection: "keep-alive",
-    },
-  };
+const getJobDetails = async (jobId) => {
+  const url = `https://jobs.jobvite.com/ness/job/${jobId}`;
+  const res = await axios.get(url);
+  const soup = new Jssoup(res.data);
 
-  const res = axios.request(config).then((response) => {
-    return response;
-  });
-
-  const soup = new Jssoup(await res.then((res) => res.data));
-  return soup;
+  const scriptMatch = res.data.match(
+    /<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/,
+  );
+  if (scriptMatch) {
+    const json = JSON.parse(scriptMatch[1]);
+    return {
+      title: json.title,
+      location: json.jobLocation
+        ? json.jobLocation[0].address.addressLocality
+        : null,
+      url: url,
+    };
+  }
+  return null;
 };
 
 const getJobs = async () => {
-  const url = "https://ness-usa.ttcportals.com/search/jobs/in/country/romania";
-  let res = await getHtml(url);
-  let page = 1;
+  const url = "https://jobs.jobvite.com/ness/jobs";
+  const res = await axios.get(url);
+  const soup = new Jssoup(res.data);
   const jobs = [];
 
-  var items = res.findAll("div", { class: "jobs-section__item" });
+  const text = res.data;
+  const jobRe = /<a[^>]*href=['"]([^'"]*\/job\/[^'"]*)['"][^>]*>([^<]*)<\/a>/g;
+  let match;
+  const jobUrls = new Set();
 
-  while (items.length > 0) {
-    for (const item of items) {
-      const job_title = item.find("a").text.trim();
-      const job_link = item.find("a").attrs.href;
-      const city = item
-        .find("div", { class: "large-4" })
-        .text.split(",")[0]
-        .replace("Location: ", "")
-        .trim();
+  while ((match = jobRe.exec(text)) !== null) {
+    const href = match[1];
+    const title = match[2].trim();
+    if (title && !jobUrls.has(href)) {
+      jobUrls.add(href);
+      const jobIdMatch = href.match(/\/job\/([a-zA-Z0-9]+)/);
+      if (jobIdMatch) {
+        const jobDetails = await getJobDetails(jobIdMatch[1]);
+        if (jobDetails) {
+          const { city: c, county: co } = await _counties.getCounties(
+            translate_city(jobDetails.location || ""),
+          );
 
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city),
-      );
+          let counties = [];
+          if (c) {
+            counties = [...new Set([...counties, ...co])];
+          }
 
-      let counties = [];
-      if (c) {
-        counties = [...new Set([...counties, ...co])];
+          const job = generateJob(
+            jobDetails.title,
+            jobDetails.url,
+            "Romania",
+            c,
+            counties,
+          );
+          jobs.push(job);
+        }
       }
-
-      const job = generateJob(job_title, job_link, "Romania", c, counties);
-      jobs.push(job);
     }
-    page += 1;
-    res = await getHtml(url + "?page=" + page + "#");
-    items = res.findAll("div", { class: "jobs-section__item" });
   }
+
   return jobs;
 };
 
@@ -88,4 +88,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+module.exports = { run, getJobs, getParams };
