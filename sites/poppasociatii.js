@@ -23,7 +23,13 @@ const getJobs = async () => {
     const job_title = item.find("a").text.trim();
     const job_link = item.find("a").attrs.href;
 
-    const job = generateJob(job_title, job_link, "Romania", "Bucuresti", "Bucuresti");
+    const job = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      "Bucuresti",
+      "Bucuresti",
+    );
     jobs.push(job);
   }
   return jobs;
@@ -34,7 +40,12 @@ const run = async () => {
   const logo = "https://www.p-a.ro/wp-content/themes/pa/images/logo.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  await postApiPeViitor(jobs, params);
+
+  if (jobs.length > 0) {
+    await postApiPeViitor(jobs, params);
+  } else {
+    console.log(`Joblist for ${company} is empty. Skipping API post.`);
+  }
 };
 
 if (require.main === module) {
