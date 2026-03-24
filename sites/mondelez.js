@@ -26,7 +26,7 @@ const getJobs = async () => {
   let soup = await scraper.post(data);
   const { total } = soup;
   const numberOfPages = Math.floor(
-    total / limit + (total % limit === 0 ? 0 : 1)
+    total / limit + (total % limit === 0 ? 0 : 1),
   );
 
   const jobs = [];
@@ -37,10 +37,12 @@ const getJobs = async () => {
       const job_link_prefix =
         "https://wd3.myworkdaysite.com/en-US/recruiting/mdlz/External";
       const job_link = job_link_prefix + item.externalPath;
-      const city = item.locationsText.split(",")[0];
+      const city = item.locationsText
+        ? item.locationsText.split(",")[0]
+        : undefined;
 
       const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city)
+        translate_city(city),
       );
 
       let counties = [];
