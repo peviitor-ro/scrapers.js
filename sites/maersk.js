@@ -13,85 +13,93 @@ const getJobs = async () => {
   const url =
     "https://maersk.wd3.myworkdayjobs.com/wday/cxs/maersk/Maersk_Careers/jobs";
   const jobs = [];
-  let offset = 0;
   const limit = 20;
-  let total = 0;
+  let offset = 0;
 
-  // Header needed for Workday API
   const headers = {
     "Content-Type": "application/json",
+    Accept: "application/json",
     "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    Origin: "https://maersk.wd3.myworkdayjobs.com",
+    Referer: "https://maersk.wd3.myworkdayjobs.com/en-US/Maersk_Careers",
   };
 
-  try {
-    do {
-      const body = {
-        appliedFacets: {},
-        limit: limit,
-        offset: offset,
-        searchText: "Romania",
-      };
+  while (true) {
+    const body = {
+      appliedFacets: {},
+      limit: limit,
+      offset: offset,
+      searchText: "",
+    };
 
-      const response = await axios.post(url, body, { headers });
-      const data = response.data;
-      total = data.total;
-      const items = data.jobPostings || [];
+    let response;
+    try {
+      response = await axios.post(url, body, { headers });
+    } catch (e) {
+      if (e.response && e.response.status === 500) {
+        break;
+      }
+      throw e;
+    }
 
-      for (const item of items) {
-        const job_title = item.title;
-        const externalPath = item.externalPath;
-        const job_link = `https://maersk.wd3.myworkdayjobs.com/en-US/Maersk_Careers${externalPath}`;
+    const data = response.data;
+    const items = data.jobPostings || [];
 
-        const locationText = item.locationsText || "";
-        let country = "";
-        let city = "";
+    if (items.length === 0) {
+      break;
+    }
 
-        if (locationText.includes(",")) {
-          const parts = locationText.split(",").map((s) => s.trim());
-          country = parts[0];
-          if (parts.length > 1) city = parts[1];
-        } else if (locationText.includes(" - ")) {
-          const parts = locationText.split(" - ").map((s) => s.trim());
-          if (parts.length > 1) city = parts[1];
+    for (const item of items) {
+      const job_title = item.title;
+      const externalPath = item.externalPath;
+      const job_link = `https://maersk.wd3.myworkdayjobs.com/en-US/Maersk_Careers${externalPath}`;
 
-          if (parts[0].startsWith("RO")) country = "Romania";
-        } else {
-          country = locationText;
-        }
+      const locationText = item.locationsText || "";
+      let country = "";
+      let city = "";
 
-        if (country !== "Romania") {
-          continue;
-        }
+      if (locationText.includes(",")) {
+        const parts = locationText.split(",").map((s) => s.trim());
+        country = parts[0];
+        if (parts.length > 1) city = parts[1];
+      } else if (locationText.includes(" - ")) {
+        const parts = locationText.split(" - ").map((s) => s.trim());
+        if (parts.length > 1) city = parts[1];
 
-        let cities = [];
-        let counties = [];
-
-        try {
-          const { city: c, county: co } = await _counties.getCounties(
-            translate_city(city),
-          );
-
-          if (c) {
-            cities.push(c);
-          }
-
-          if (co) {
-            counties = [...new Set([...(Array.isArray(co) ? co : [co])])];
-          }
-        } catch (e) {
-          // keep Romania job even if county lookup fails
-        }
-
-        jobs.push(
-          generateJob(job_title, job_link, "Romania", cities, counties),
-        );
+        if (parts[0].startsWith("RO")) country = "Romania";
+      } else {
+        country = locationText;
       }
 
-      offset += limit;
-    } while (offset < total);
-  } catch (e) {
-    console.error("Error fetching Workday jobs:", e.message);
+      if (country !== "Romania") {
+        continue;
+      }
+
+      let cities = [];
+      let counties = [];
+
+      try {
+        const { city: c, county: co } = await _counties.getCounties(
+          translate_city(city),
+        );
+
+        if (c) {
+          cities.push(c);
+        }
+
+        if (co) {
+          counties = [...new Set([...(Array.isArray(co) ? co : [co])])];
+        }
+      } catch (e) {}
+
+      jobs.push(generateJob(job_title, job_link, "Romania", cities, counties));
+    }
+
+    offset += limit;
+    if (offset >= data.total) {
+      break;
+    }
   }
 
   return jobs;
