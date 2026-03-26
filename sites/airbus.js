@@ -44,9 +44,11 @@ const getJobs = async () => {
     const job_link =
       "https://ag.wd3.myworkdayjobs.com/en-US/Airbus" + item.externalPath;
     const country = "Romania";
-    const locationContainer = item.locationsText.split(",");
+    const locationContainer = item.locationsText
+      ? item.locationsText.split(",")
+      : [];
     const city = translate_city(
-      locationContainer[0].replace("Bucarest", "Bucuresti")
+      locationContainer[0].replace("Bucarest", "Bucuresti"),
     );
 
     const { city: c, county: co } = await _counties.getCounties(city);
