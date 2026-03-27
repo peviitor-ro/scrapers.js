@@ -10,8 +10,7 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url =
-    "https://jobs.ikea.com/en/search-jobs/Romania/22908/2/798549/46/25/50/2";
+  const url = "https://jobs.ikea.com/en/search-jobs?k=&l=Romania&orgIds=22908";
   const scraper = new Scraper(url);
   const soup = await scraper.get_soup("HTML");
 
@@ -29,7 +28,7 @@ const getJobs = async () => {
       job
         .find("span", { class: "job-list__location" })
         .text.split(",")[0]
-        .trim()
+        .trim(),
     );
 
     const { city: c, county: co } = await _counties.getCounties(city);
