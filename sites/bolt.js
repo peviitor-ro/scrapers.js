@@ -1,6 +1,6 @@
+const puppeteer = require("puppeteer");
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -10,14 +10,25 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url =
-    "https://bolt.eu/en/careers/positions/?location=Romania-Bucharest&_rsc=yl102";
+  const url = "https://bolt.eu/en/careers/positions/?location=Romania";
   const jobs = [];
-  const scraper = new Scraper(url);
-  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
-  const type = "HTML";
-  const res = await scraper.get_soup(type);
-  const modifiedText = res.text
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  );
+
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  const html = await page.content();
+  await browser.close();
+
+  const modifiedText = html
     .replace(/\\/g, "")
     .replace(/"\$undefined"/g, "null")
     .replace(/"\$D/g, '"');
