@@ -1,34 +1,67 @@
+const puppeteer = require("puppeteer");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
 
 const getJobs = async () => {
-  let url = "https://www.regnology.net/en/careers/";
+  const url = "https://regnology.jobs.personio.de/?language=en";
   const jobs = [];
-  const scraper = new Scraper(url);
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
-  let res = await scraper.get_soup("HTML");
-  let items = res.find("ul", { class: "link-list" }).findAll("li");
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  );
 
-  const romaniaCities = {
-    Bucharest: "Bucharest",
-    Sibiu: "Sibiu",
-  };
+  await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+  await new Promise((resolve) => setTimeout(resolve, 8000));
+
+  const html = await page.content();
+  await browser.close();
+
+  const Jssoup = require("jssoup").default;
+  const res = new Jssoup(html);
+  const items = res.findAll("a", { class: "page_job__haA3E" });
+
+  const romanianCities = ["Bucharest", "Timisoara", "Sibiu", "Cluj-Napoca"];
 
   items.forEach((item) => {
-    const cityElement = item.find("p");
-    const city = cityElement ? cityElement.text.trim() : "";
-    const county = romaniaCities[city];
+    const jobLink = item.attrs.href;
+    const jobTitleElement = item.find("h3", { class: "page_jobTitle__K0ilk" });
+    const job_title = jobTitleElement ? jobTitleElement.text.trim() : "";
 
-    if (county) {
-      const job_title = item.find("h3").text.trim();
-      const job_link = "https://www.regnology.net" + item.find("a").attrs.href;
+    const metaDiv = item.find("div", { class: "page_jobMeta__GhU10" });
+    const metaItems = metaDiv
+      ? metaDiv.findAll("div", { class: "page_jobMetaItem__olmVi" })
+      : [];
+
+    let location = "";
+    if (metaItems.length > 0) {
+      const locationSpan = metaItems[0].find("span");
+      location = locationSpan ? locationSpan.text.trim() : "";
+    }
+
+    let city = "";
+    let county = "";
+
+    const foundRomanianCity = romanianCities.find((c) => location.includes(c));
+
+    if (foundRomanianCity) {
+      city = foundRomanianCity;
+      county = foundRomanianCity;
+    }
+
+    if (county && job_title) {
+      const job_link = "https://regnology.jobs.personio.de" + jobLink;
       jobs.push(generateJob(job_title, job_link, "Romania", city, county));
     }
   });
+
   return jobs;
 };
 
@@ -45,4 +78,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+module.exports = { run, getJobs, getParams };
