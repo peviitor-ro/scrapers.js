@@ -58,9 +58,17 @@ const getJobs = async () => {
       let counties = [];
       const job_type = await get_job_type(job_link);
 
-      const { city: c, county: co } = await _counties.getCounties(
-        translate_city(location),
-      );
+      let result;
+      for (let retry = 0; retry < 3; retry++) {
+        try {
+          result = await _counties.getCounties(translate_city(location));
+          break;
+        } catch (e) {
+          if (retry === 2) throw e;
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+      const { city: c, county: co } = result;
 
       if (c) {
         cities.push(c);
