@@ -11,10 +11,10 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://career.globant.com/api/sap/job-requisition?&page=1&country=RO";
+    "https://career.globant.com/api/sap/job-requisition?page=0&country=RO";
 
   const res = await fetch(url).then((response) => response.json());
-  const items = res.jobRequisition;
+  const items = res.jobRequisition || [];
 
   const jobs = [];
 
@@ -40,7 +40,12 @@ const run = async () => {
     "https://seekvectorlogo.com/wp-content/uploads/2019/06/globant-vector-logo.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+
+  if (jobs.length > 0) {
+    postApiPeViitor(jobs, params);
+  } else {
+    console.log(`Joblist for ${company} is empty. Skipping API post.`);
+  }
 };
 
 if (require.main === module) {
