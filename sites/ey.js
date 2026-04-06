@@ -10,9 +10,13 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
-const get_job_type = async (url) => {
-  const scraper = new Scraper(url);
-  const res = await scraper.get_soup("HtML");
+const get_job_type = async (scraper, url) => {
+  let res;
+  try {
+    res = await scraper.render_page();
+  } catch (e) {
+    res = await scraper.get_soup("HTML");
+  }
 
   try {
     const job_type_elem = res
@@ -30,9 +34,18 @@ const get_job_type = async (url) => {
 const getJobs = async () => {
   let url = "https://careers.ey.com/ey/search/?q=Romania&startrow=0";
   const jobs = [];
-  const scraper = new Scraper(url);
 
-  let res = await scraper.get_soup("HTML");
+  const scraper = new Scraper(url);
+  scraper.config.headers["User-Agent"] =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+  let res;
+  try {
+    res = await scraper.render_page();
+  } catch (e) {
+    console.log("render_page failed, trying get_soup...");
+    res = await scraper.get_soup("HTML");
+  }
 
   const step = 25;
   const total_jobs = parseInt(
@@ -56,7 +69,11 @@ const getJobs = async () => {
         .trim();
       let cities = [];
       let counties = [];
-      const job_type = await get_job_type(job_link);
+
+      const jobScraper = new Scraper(job_link);
+      jobScraper.config.headers["User-Agent"] =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+      const job_type = await get_job_type(jobScraper, job_link);
 
       let result;
       for (let retry = 0; retry < 3; retry++) {
@@ -87,7 +104,11 @@ const getJobs = async () => {
 
     url = "https://careers.ey.com/ey/search/?q=Romania&startrow=" + rows[i + 1];
     scraper.url = url;
-    res = await scraper.get_soup("HTML");
+    try {
+      res = await scraper.render_page();
+    } catch (e) {
+      res = await scraper.get_soup("HTML");
+    }
   }
   return jobs;
 };
@@ -105,4 +126,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+module.exports = { run, getJobs, getParams };

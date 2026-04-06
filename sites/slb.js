@@ -1,6 +1,6 @@
-const axios = require("axios");
 const { translate_city } = require("../utils.js");
 const {
+  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -8,94 +8,74 @@ const {
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
-const JOBS_URL = "https://careers.slb.com/job-listing";
-const SOURCE = "ATS_Jobs_Source - Prod";
-
-const getCoveoConfig = async () => {
-  const html = (
-    await axios.get(JOBS_URL, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    })
-  ).data;
-
-  const getValue = (field) =>
-    html.match(new RegExp(`id="${field}"[^>]*value="([^"]+)"`))?.[1];
-
-  return {
-    organizationId: getValue("organizationId"),
-    accessToken: getValue("accessToken"),
-  };
-};
-
-const normalizeJobLink = (jobLink) =>
-  jobLink.replace(/\s+\d+$/, "").replace(/;+/g, "&");
-
-const normalizeCity = (cityName) =>
-  translate_city(cityName || "")
-    .trim()
-    .replace(/-/g, " ");
-
-const getCitiesAndCounties = async (cityName) => {
-  const normalizedCity = normalizeCity(cityName);
-
-  if (!normalizedCity || normalizedCity === "Multi-Location") {
-    return { cities: [], counties: [] };
-  }
-
-  const { city, county } = await _counties.getCounties(normalizedCity);
-
-  if (!city) {
-    return { cities: [], counties: [] };
-  }
-
-  return { cities: [city], counties: [...new Set(county)] };
-};
 
 const getJobs = async () => {
-  const { organizationId, accessToken } = await getCoveoConfig();
-
-  const response = await axios.post(
-    `https://${organizationId}.org.coveo.com/rest/search/v2`,
-    {
-      q: "Romania",
-      numberOfResults: 50,
-      firstResult: 0,
-      aq: `@source==\"${SOURCE}\"`,
-      sortCriteria: "relevancy",
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0",
-      },
-    },
-  );
-
   const jobs = [];
-  const seen = new Set();
+  const url =
+    "https://slb.eightfold.ai/api/pcsx/search?domain=slb.com&query=&location=Romania&start=0&filter_distance=80&filter_include_remote=1";
 
-  for (const item of response.data.results || []) {
-    const job = item.raw || {};
-    const countries = Array.isArray(job.country)
-      ? job.country
-      : [job.country].filter(Boolean);
+  let scraper = new Scraper(url);
+  let type = "JSON";
+  let response = await scraper.get_soup(type);
+  const totalJobs = response.data.count;
+  const pages = Math.ceil(totalJobs / 10);
 
-    if (!countries.includes("Romania")) {
-      continue;
+  const fetchPages = async () => {
+    const jobs = [];
+    for (let page = 0; page < pages; page += 10) {
+      const jobspage = response.data.positions.map((job) => {
+        return {
+          name: job.name,
+          canonicalPositionUrl: job.positionUrl,
+          locations: job.locations,
+        };
+      });
+      jobs.push(...jobspage);
+      scraper = new Scraper(
+        `https://slb.eightfold.ai/api/pcsx/search?domain=slb.com&query=&location=Romania&start=${page}&filter_distance=80&filter_include_remote=1`,
+      );
+      response = await scraper.get_soup(type);
     }
+    return jobs;
+  };
 
-    const job_title = job.title || item.title;
-    const job_link = normalizeJobLink(job.uri || item.uri || "");
+  const elements = await fetchPages();
 
-    if (!job_title || !job_link || seen.has(job_link)) {
-      continue;
+  for (const job of elements) {
+    const job_title = job.name;
+    const job_link = `https://slb.eightfold.ai${job.canonicalPositionUrl}`;
+    let city;
+    let county;
+    const locations = job.locations;
+
+    for (const location of locations) {
+      if (
+        location.includes("Romania") ||
+        location.includes("ROU") ||
+        location.includes("RO")
+      ) {
+        try {
+          if (location.startsWith("Multi-Location")) {
+            city = "Romania";
+            county = [];
+          } else {
+            city = location.split(",")[0];
+            const obj = await _counties.getCounties(
+              translate_city(city.trim()),
+            );
+            city = obj.city;
+            county = obj.county;
+          }
+        } catch (error) {
+          city = location;
+          const obj = await _counties.getCounties(translate_city(city.trim()));
+          city = obj.city;
+          county = obj.county;
+        }
+
+        jobs.push(generateJob(job_title, job_link, "Romania", city, county));
+      }
     }
-
-    seen.add(job_link);
-
-    const { cities, counties } = await getCitiesAndCounties(job.city);
-    jobs.push(generateJob(job_title, job_link, "Romania", cities, counties));
   }
 
   return jobs;

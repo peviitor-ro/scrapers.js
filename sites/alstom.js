@@ -11,50 +11,82 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://jobsearch.alstom.com/search/?q=&locationsearch=Romania";
-  const scraper = new Scraper(url);
-  const res = await scraper.get_soup("HTML");
+  const urls = [
+    "https://jobsearch.alstom.com/search/?q=&locationsearch=Romania",
+    "https://career5.successfactors.eu/careers?company=ALSTOM&q=&locationsearch=Romania",
+  ];
 
-  const totalJobs = parseInt(
-    res.find("span", { class: "paginationLabel" }).findAll("b")[1].text
-  );
-  const step = 25;
-
-  const pages = range(0, totalJobs, step);
-
-  const items = [];
-
-  if (totalJobs > step) {
-    for (const page of pages) {
-      const url = `https://jobsearch.alstom.com/search/?q=&locationsearch=Romania&startrow=${page}`;
+  for (const url of urls) {
+    console.log(`Trying URL: ${url}`);
+    try {
       const scraper = new Scraper(url);
-      const res = await scraper.get_soup("HTML");
-      items.push(...res.find("tbody").findAll("tr"));
+      scraper.config.headers["User-Agent"] =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+      let res;
+      try {
+        res = await scraper.get_soup("HTML");
+      } catch (e) {
+        console.log("get_soup failed, trying render_page...");
+        res = await scraper.render_page();
+      }
+
+      const tbody = res.find("tbody");
+      if (!tbody) {
+        console.log("No tbody found, trying next URL...");
+        continue;
+      }
+
+      const items = tbody.findAll("tr");
+      if (items.length === 0) {
+        console.log("No job rows found, trying next URL...");
+        continue;
+      }
+
+      console.log(`Found ${items.length} jobs on ${url}`);
+      return parseJobItems(items, url);
+    } catch (error) {
+      console.log(`Failed to fetch from ${url}:`, error.message);
+      continue;
     }
-  } else {
-    items.push(...res.find("tbody").findAll("tr"));
   }
 
+  console.log("All URLs failed. Returning empty list.");
+  return [];
+};
+
+const parseJobItems = async (items, baseUrl) => {
   const jobs = [];
-
   for (const item of items) {
-    let cities = [];
-    let counties = [];
-    const job_title = item.find("a").text.trim();
-    const job_link = "https://jobsearch.alstom.com" + item.find("a").attrs.href;
-    const country = "Romania";
-    const city = translate_city(
-      item.find("span", { class: "jobLocation" }).text.split(",")[0].trim()
-    );
+    try {
+      let cities = [];
+      let counties = [];
+      const jobTitleElem = item.find("a");
+      if (!jobTitleElem) continue;
 
-    const { city: c, county: co } = await _counties.getCounties(city);
-    if (c) {
-      cities.push(c);
-      counties = [...new Set([...counties, ...co])];
+      const job_title = jobTitleElem.text.trim();
+      const job_link =
+        baseUrl.replace(/\/search\/.*|\/careers.*/, "") +
+        jobTitleElem.attrs.href;
+      const country = "Romania";
+
+      const locationSpan = item.find("span", { class: "jobLocation" });
+      const cityText = locationSpan
+        ? locationSpan.text.split(",")[0].trim()
+        : "";
+      const city = translate_city(cityText);
+
+      const { city: c, county: co } = await _counties.getCounties(city);
+      if (c) {
+        cities.push(c);
+        counties = [...new Set([...counties, ...co])];
+      }
+
+      const job = generateJob(job_title, job_link, country, cities, counties);
+      jobs.push(job);
+    } catch (e) {
+      console.error("Error parsing job item:", e.message);
     }
-
-    const job = generateJob(job_title, job_link, country, cities, counties);
-    jobs.push(job);
   }
   return jobs;
 };
@@ -64,6 +96,10 @@ const run = async () => {
   const logo =
     "https://rmkcdn.successfactors.com/44ea18da/ff6f3396-32e1-421d-915a-5.jpg";
   const jobs = await getJobs();
+  if (jobs.length === 0) {
+    console.log("No jobs found from Alstom.");
+    return;
+  }
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };

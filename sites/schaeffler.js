@@ -23,51 +23,60 @@ const decodeHtml = (text) =>
     .replace(/&gt;/g, ">");
 
 const getJobs = async () => {
-  const scraper = new Scraper(SEARCH_URL);
-  const res = await scraper.get_soup("HTML");
   const jobs = [];
 
-  const totalJobs = Number.parseInt(
-    res.text.match(/jobRecordsFound: parseInt\("(.*?)"\)/)?.[1] || "0",
-    10,
-  );
+  try {
+    const scraper = new Scraper(SEARCH_URL);
+    scraper.config.headers["User-Agent"] =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    const res = await scraper.get_soup("HTML");
 
-  if (totalJobs === 0) {
-    return jobs;
-  }
+    const totalJobs = Number.parseInt(
+      res.text.match(/jobRecordsFound: parseInt\("(.*?)"\)/)?.[1] || "0",
+      10,
+    );
 
-  const steps = range(0, totalJobs, 100);
-
-  for (const step of steps) {
-    const pageScraper = new Scraper(`${TILES_URL}${step}`);
-    const page = await pageScraper.get_soup("HTML");
-    const items = page.findAll("li", { class: "job-tile" });
-
-    for (const item of items) {
-      const linkNode = item.find("a");
-      const cityNode = item.find("div", { class: "city" })?.find("div");
-
-      if (!linkNode || !cityNode) {
-        continue;
-      }
-
-      const job_title = decodeHtml(linkNode.text.trim());
-      const job_link = decodeHtml(
-        `https://jobs.schaeffler.com${linkNode.attrs.href}`,
-      );
-      const location = translate_city(cityNode.text.trim());
-      const { city, county } = await _counties.getCounties(location);
-
-      jobs.push(
-        generateJob(
-          job_title,
-          job_link,
-          "Romania",
-          city || location,
-          county || [],
-        ),
-      );
+    if (totalJobs === 0) {
+      return jobs;
     }
+
+    const steps = range(0, totalJobs, 100);
+
+    for (const step of steps) {
+      const pageScraper = new Scraper(`${TILES_URL}${step}`);
+      pageScraper.config.headers["User-Agent"] =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+      const page = await pageScraper.get_soup("HTML");
+      const items = page.findAll("li", { class: "job-tile" });
+
+      for (const item of items) {
+        const linkNode = item.find("a");
+        const cityNode = item.find("div", { class: "city" })?.find("div");
+
+        if (!linkNode || !cityNode) {
+          continue;
+        }
+
+        const job_title = decodeHtml(linkNode.text.trim());
+        const job_link = decodeHtml(
+          `https://jobs.schaeffler.com${linkNode.attrs.href}`,
+        );
+        const location = translate_city(cityNode.text.trim());
+        const { city, county } = await _counties.getCounties(location);
+
+        jobs.push(
+          generateJob(
+            job_title,
+            job_link,
+            "Romania",
+            city || location,
+            county || [],
+          ),
+        );
+      }
+    }
+  } catch (error) {
+    console.log(`Error fetching jobs from Schaeffler: ${error.message}`);
   }
 
   return jobs;

@@ -1,6 +1,6 @@
+const axios = require("axios");
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -13,9 +13,28 @@ const URL =
 const NO_JOBS_TEXT =
   'There Are Currently No Open Positions Matching "Romania".';
 
+const axiosInstance = axios.create({
+  timeout: 10000,
+});
+
 const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  const soup = await scraper.get_soup("HTML");
+  let soup;
+  try {
+    const response = await axiosInstance.get(URL, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
+      },
+    });
+    const Jssoup = require("jssoup").default;
+    soup = new Jssoup(response.data);
+  } catch (error) {
+    console.log(
+      `Network error fetching jobs from ${URL}, returning empty array`,
+    );
+    return [];
+  }
+
   const jobs = [];
 
   if (soup.text.includes(NO_JOBS_TEXT)) {
