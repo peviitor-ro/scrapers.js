@@ -6,57 +6,73 @@ const {
   getParams,
 } = require("peviitor_jsscraper");
 const { Counties } = require("../getTownAndCounty.js");
+const axios = require("axios");
+const Jssoup = require("jssoup").default;
 
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url =
-    " https://www.heidelbergmaterials.ro/ro/anunturi-de-angajare?field_job_offer_entry_level=16&field_job_offer_contract_type=13";
-  const scraper = new Scraper(url);
-  const type = "HTML";
-  const soup = await scraper.get_soup(type);
-  const total_jobs = soup
-    .find("p", { class: "hc-title" })
-    .text.trim()
-    .split(" ")[0];
+  const baseUrl = "https://www.heidelbergmaterials.ro/ro/views/ajax";
+  const data = new URLSearchParams({
+    view_name: "job_search",
+    view_display_id: "search",
+    field_job_offer_entry_level: "16",
+    field_job_offer_contract_type: "13",
+  });
 
-  const step = 10;
-  const numberPages = Math.ceil(total_jobs / step);
+  const response = await axios.post(baseUrl, data.toString(), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    },
+  });
 
-  let jobs = [];
-  for (let i = 0; i < numberPages; i++) {
-    const url = `https://www.heidelbergmaterials.ro/ro/anunturi-de-angajare?field_job_offer_entry_level=16&field_job_offer_contract_type=13&page=${i}`;
-    const s = new Scraper(url);
-    const soup = await s.get_soup(type);
-    const results = soup
-      .find("div", { class: "hc-search-list" })
-      .findAll("div", { class: "hc-teaser__content" });
-
-    for (const job of results) {
-      const job_title = job.find("a", { class: "hc-link" }).text.trim();
-      const job_link =
-        "https://www.heidelbergmaterials.ro" + job.find("a").attrs.href;
-      const locations = job.find("ul").findAll("li")[2].text.split(" ");
-      const city = translate_city(locations[locations.length - 1]);
-      let counties = [];
-
-      const { city: c, county: co } = await _counties.getCounties(city);
-
-      if (c) {
-        counties = [...new Set([...counties, ...co])];
-      }
-
-      const job_element = generateJob(
-        job_title,
-        job_link,
-        "Romania",
-        c,
-        counties
-      );
-
-      jobs.push(job_element);
+  let htmlContent = "";
+  for (const cmd of response.data) {
+    if (
+      cmd.command === "insert" &&
+      cmd.data &&
+      cmd.data.includes("hc-search-list")
+    ) {
+      htmlContent = cmd.data;
+      break;
     }
   }
+
+  const soup = new Jssoup(htmlContent);
+  const results = soup.findAll("div", { class: "hc-teaser__content" });
+
+  const jobs = [];
+  for (const job of results) {
+    const job_title = job.find("a", { class: "hc-link" }).getText().trim();
+    const job_link =
+      "https://www.heidelbergmaterials.ro" + job.find("a").attrs.href;
+    const locations = job.find("ul").findAll("li");
+    const location_text =
+      locations.length > 2 ? locations[2].getText().trim() : "";
+    const cityParts = location_text.split(" ");
+    const cityName = cityParts[cityParts.length - 1].replace("-", " ");
+    const city = translate_city(cityName);
+    let counties = [];
+
+    const { city: c, county: co } = await _counties.getCounties(city);
+
+    if (c) {
+      counties = [...new Set([...counties, ...co])];
+    }
+
+    const job_element = generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      c,
+      counties,
+    );
+
+    jobs.push(job_element);
+  }
+
   return jobs;
 };
 
