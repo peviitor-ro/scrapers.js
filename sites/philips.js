@@ -29,11 +29,9 @@ const getJobs = async () => {
   let soup = await scraper.post(data);
   const { total } = soup;
   const numberOfPages = Math.floor(
-    total % limit === 0 ? total / limit : total / limit + 1
+    total % limit === 0 ? total / limit : total / limit + 1,
   );
   const jobs = [];
-
-  
 
   for (let i = 0; i < numberOfPages; i += 1) {
     let items = soup.jobPostings;
@@ -44,10 +42,13 @@ const getJobs = async () => {
         "https://philips.wd3.myworkdayjobs.com/en-US/jobs-and-careers";
       const job_link = job_link_prefix + item.externalPath;
 
-      const separatorIndex = item.locationsText.indexOf(",");
-      const city = translate_city(
-        item.locationsText.substring(separatorIndex + 1)
-      );
+      const locationsText = item.locationsText || "";
+      const separatorIndex = locationsText.indexOf(",");
+      let city = "";
+
+      if (separatorIndex !== -1) {
+        city = translate_city(locationsText.substring(separatorIndex + 1));
+      }
 
       let counties = [];
 
@@ -62,7 +63,7 @@ const getJobs = async () => {
         job_link,
         "Romania",
         c,
-        counties
+        counties,
       );
       jobs.push(job_element);
     }
