@@ -10,12 +10,17 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  let url =
-    " https://flextronics.wd1.myworkdayjobs.com/wday/cxs/flextronics/Careers/jobs";
+  const url =
+    "https://flextronics.wd1.myworkdayjobs.com/wday/cxs/flextronics/Careers/jobs";
 
   const s = new Scraper(url);
   s.config.headers["Content-Type"] = "application/json";
   s.config.headers["Accept"] = "application/json";
+  s.config.headers["User-Agent"] =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  s.config.headers["Origin"] = "https://flextronics.wd1.myworkdayjobs.com";
+  s.config.headers["Referer"] =
+    "https://flextronics.wd1.myworkdayjobs.com/ro-RO/Careers";
 
   let data = {
     appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
@@ -44,7 +49,7 @@ const getJobs = async () => {
       let counties = [];
 
       const { city: c, county: co } = await _counties.getCounties(
-        translate_city(city.trim())
+        translate_city(city.trim()),
       );
 
       if (c) {
@@ -56,7 +61,7 @@ const getJobs = async () => {
         job_link,
         "Romania",
         c,
-        counties
+        counties,
       );
 
       jobs.push(job_element);
