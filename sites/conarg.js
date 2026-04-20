@@ -29,7 +29,7 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "Conarg";
-  const logo = "http://www.conarg.co/images/logo/logo.svg";
+  const logo = "https://www.conarg.co/images/logo/conarg-logo.svg";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);

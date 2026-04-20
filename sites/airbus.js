@@ -65,8 +65,7 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "Airbus";
-  const logo =
-    "https://brand.airbus.com/sites/g/files/jlcbta121/files/styles/airbus_480x480/public/2021-06/logo_blue.png";
+  const logo = "";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
