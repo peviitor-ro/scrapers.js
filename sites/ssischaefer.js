@@ -1,71 +1,49 @@
-const { translate_city } = require("../utils.js");
+const puppeteer = require("puppeteer");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
-const { Counties } = require("../getTownAndCounty.js");
 
-const _counties = new Counties();
-const URL =
-  "https://www.ssi-schaefer.com/service/vacancysearch/ro-ro/1319586?query=&locations=&modesOfEmployment=&taskArea=&sortcriteria=";
-
-const getLocations = async (locationText) => {
-  const cities = [];
-  let counties = [];
-  const remote = [];
-
-  for (const part of locationText.split(",").map((value) => value.trim())) {
-    if (!part) {
-      continue;
-    }
-
-    if (part.toLowerCase() === "hybrid") {
-      remote.push("hybrid");
-      continue;
-    }
-
-    const { city, county } = await _counties.getCounties(translate_city(part));
-
-    if (city) {
-      cities.push(city);
-      counties = [...new Set([...counties, ...county])];
-    }
-  }
-
-  return {
-    cities: [...new Set(cities)],
-    counties,
-    remote: [...new Set(remote)],
-  };
-};
+const URL = "https://jobs.ssi-schaefer.com/go/All-Jobs/9108855/";
 
 const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  const soup = await scraper.get_soup("HTML");
   const jobs = [];
-  const items = soup.findAll("div", { class: "result" });
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
-  for (const item of items) {
-    const titleNode = item.find("h3", { class: "heading-2" });
-    const linkNode = item.find("a", { class: "result__link" });
-    const locationText = item.find("div", { class: "job-list-location" })?.text;
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  );
 
-    if (!titleNode || !linkNode || !locationText) {
+  await page.goto(URL, { waitUntil: "networkidle2", timeout: 60000 });
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  const jobData = await page.evaluate(() => {
+    const tiles = document.querySelectorAll(".job-tile");
+    return Array.from(tiles).map((tile) => {
+      const titleLink = tile.querySelector(".jobTitle-link");
+      const locationDiv = tile.querySelector(".location");
+      return {
+        title: titleLink ? titleLink.textContent.trim() : null,
+        link: titleLink ? titleLink.href : null,
+        location: locationDiv ? locationDiv.textContent.trim() : null,
+      };
+    });
+  });
+
+  for (const job of jobData) {
+    if (!job.title || !job.link || !job.location) {
       continue;
     }
 
-    const job_title = titleNode.text.trim();
-    const job_link = `https://www.ssi-schaefer.com${linkNode.attrs.href}`;
-    const cleanedLocation = locationText.replace("Locaţii:", "").trim();
-    const { cities, counties, remote } = await getLocations(cleanedLocation);
-
-    jobs.push(
-      generateJob(job_title, job_link, "Romania", cities, counties, remote),
-    );
+    jobs.push(generateJob(job.title, job.link, "Romania", [], [], []));
   }
 
+  await browser.close();
   return jobs;
 };
 
