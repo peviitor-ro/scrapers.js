@@ -11,6 +11,7 @@ const _counties = new Counties();
 
 const getAditionalcities = async (job_link) => {
   const scraper = new Scraper(job_link);
+  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
   const res = await scraper.get_soup("HTML");
   const items = res
     .find("dl", { class: "company-links" })
@@ -38,6 +39,7 @@ const getJobs = async () => {
   const jobs = [];
   let page = 1;
   const scraper = new Scraper(url);
+  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
 
   let res = await scraper.get_soup("HTML");
   let items = res.findAll("li", { class: "z-career-job-card-image" });
