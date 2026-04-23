@@ -10,49 +10,51 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://www.leoni.com/jobs-career/jobs-portal";
+  const url = "https://www.leoni.ro/en/jobs-portal";
   const scraper = new Scraper(url);
+
+  scraper.config.headers["User-Agent"] =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  scraper.config.headers["Accept-Language"] = "en-US,en;q=0.9";
+  scraper.config.timeout = 60000;
+
   const res = await scraper.get_soup("HTML");
 
   const jobs = [];
-  const jobElements = res.findAll("div", { class: "item-grid__tile" });
+  const jobCards = res.findAll("a", { href: true }).filter(a => a.attrs.href?.includes("/jobs-portal/detail/"));
 
-  for (const elem of jobElements) {
-    const country = elem
-      .find("p", { class: "icon--start-location_on" })
-      .text.split(",")[1]
-      .trim();
-    if (country === "Romania") {
-      const job_title = elem.find("h3").text.trim();
-      const job_link = elem.find("a").attrs.href;
-      const location = elem
-        .find("p", { class: "icon--start-location_on" })
-        .text.split(",")[0]
-        .trim()
-        .replace("Location:", "");
-      const remote = elem
-        .find("p", { class: "icon--start-work" })
-        .text.trim()
-        .replace("Type of job:", "")
-        .toLowerCase().replace("onsite", "on-site");
-      let cities = [];
-      let counties = [];
-      const city = translate_city(location);
-      const { city: c, county: co } = await _counties.getCounties(city);
-      if (c) {
-        cities.push(c);
-        counties = [...new Set([...counties, ...co])];
-      }
-      const job = generateJob(
-        job_title,
-        job_link,
-        country,
-        cities,
-        counties,
-        remote
-      );
-      jobs.push(job);
+  for (const card of jobCards) {
+    const cardText = card.text;
+
+    const locationMatch = cardText.match(/Location:\s*([^,\n]+),\s*Romania/i);
+    if (!locationMatch) continue;
+
+    const jobTitle = cardText.substring(0, cardText.indexOf("Location:")).trim();
+    const location = locationMatch[1].trim();
+
+    const remoteMatch = cardText.match(/Type of job:\s*(\w+?)(?=Date|$)/i);
+    const remote = remoteMatch ? remoteMatch[1].toLowerCase().replace("onsite", "on-site") : "on-site";
+
+    const jobLink = "https://www.leoni.ro" + card.attrs.href;
+
+    let cities = [];
+    let counties = [];
+    const city = translate_city(location);
+    const { city: c, county: co } = await _counties.getCounties(city);
+    if (c) {
+      cities.push(c);
+      counties = [...new Set([...counties, ...co])];
     }
+
+    const job = generateJob(
+      jobTitle,
+      jobLink,
+      "Romania",
+      cities,
+      counties,
+      remote
+    );
+    jobs.push(job);
   }
   return jobs;
 };
