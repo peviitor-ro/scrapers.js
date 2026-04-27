@@ -8,58 +8,41 @@ const {
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
-const URL = "https://amdaris.com/jobs/";
-const LOCATION_MAP = {
-  bucharest: "Bucuresti",
-  timisoara: "Timisoara",
-};
-const decodeHtml = (text) =>
-  text.replace(/&#038;/g, "&").replace(/&amp;/g, "&");
+const API_URL = "https://amdaris.com/wp-json/wp/v2/pages/365996";
+
+const ROMANIA_LOCATIONS = ["bucuresti", "timisoara", "romania"];
 
 const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  const res = await scraper.get_soup("HTML");
+  const scraper = new Scraper(API_URL);
+  const res = await scraper.get_soup("JSON");
+
+  const content = res.content.rendered;
+
+  const jobCardRegex = /<div class="job-card"[^>]*data-href="([^"]*)"[^>]*>[\s\S]*?<h6 class="job-card__title">([^<]+)<\/h6>[\s\S]*?<span class="job-card__meta-item"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<\/svg>\s*([^<]+)<\/span>/g;
 
   const jobs = [];
-  const items = res
-    .find("table", { id: "jobs-data-table" })
-    .find("tbody")
-    .findAll("tr");
+  let match;
+  while ((match = jobCardRegex.exec(content)) !== null) {
+    const job_link = match[1];
+    const job_title = match[2].trim().replace(/&amp;/g, "&");
+    const locationText = match[3].trim();
 
-  for (const item of items) {
-    const location = item.find("td", { class: "country-role" })?.text.trim();
+    let location = "";
+    if (locationText.toLowerCase().includes("bucure")) {
+      location = "Bucuresti";
+    } else if (locationText.toLowerCase().includes("timisoara")) {
+      location = "Timisoara";
+    } else if (locationText.toLowerCase() === "romania" || locationText.toLowerCase().includes(", romania")) {
+      location = "Romania";
+    }
 
-    if (
-      !location ||
-      !["bucharest", "timisoara", "romania"].includes(location.toLowerCase())
-    ) {
+    if (!job_title || !location || !ROMANIA_LOCATIONS.includes(location.toLowerCase())) {
       continue;
     }
 
-    const titleNode = item.find("a");
+    const finalJobLink = job_link.startsWith("http") ? job_link : "https://amdaris.com" + job_link;
 
-    if (!titleNode) {
-      continue;
-    }
-
-    const job_title = decodeHtml(titleNode.text.trim());
-    const job_link = titleNode.attrs.href;
-    const normalizedLocation = LOCATION_MAP[location.toLowerCase()] || location;
-    const city = translate_city(normalizedLocation);
-
-    let counties = [];
-    let finalCity = [];
-
-    if (location.toLowerCase() !== "romania") {
-      const { city: c, county: co } = await _counties.getCounties(city);
-
-      if (c) {
-        finalCity = c;
-        counties = [...new Set([...counties, ...co])];
-      }
-    }
-
-    jobs.push(generateJob(job_title, job_link, "Romania", finalCity, counties));
+    jobs.push(generateJob(job_title, finalJobLink, "Romania", location === "Romania" ? [] : [location], []));
   }
 
   return jobs;
