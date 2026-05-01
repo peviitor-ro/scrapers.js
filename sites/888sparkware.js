@@ -12,7 +12,14 @@ const getJobs = async () => {
   const url = "https://888sparkware.ro";
   const scraper = new Scraper(url);
 
-  const res = await scraper.get_soup("HTML");
+  let res;
+  try {
+    res = await scraper.get_soup("HTML");
+  } catch (error) {
+    console.error(`Failed to fetch jobs from ${url}: ${error.message}`);
+    return [];
+  }
+
   const items = res.findAll("div", { class: "position-container" });
 
   const jobs = [];
@@ -42,6 +49,10 @@ const run = async () => {
   const logo =
     "https://888sparkware.ro/wp-content/uploads/2020/06/Sparkware_black_horizontal.png";
   const jobs = await getJobs();
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}`);
+    return;
+  }
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
