@@ -16,7 +16,7 @@ const getJobs = async () => {
   const jobs = [];
 
   const data = {
-    appliedFacets: { locations: ["8061b46e8417013734b3e7821f405d4e"] },
+    appliedFacets: {},
     limit: 20,
     offset: 0,
     searchText: "",
@@ -28,19 +28,36 @@ const getJobs = async () => {
   const pages = Math.ceil(jobsNumber / 20);
   console.log(`Total jobs: ${jobsNumber}, Pages: ${pages}`);
 
+  const allPostings = [];
+
   for (let i = 1; i <= pages; i++) {
     for (const job of res.jobPostings) {
-      const job_title = job.title;
-      const job_link = `https://finastra.wd3.myworkdayjobs.com/en-US/FINC${job.externalPath}`;
-      const city = translate_city(job.locationsText);
-      let counties = [];
+      allPostings.push(job);
+    }
+    if (i < pages) {
+      data.offset = i * 20;
+      res = await scraper.post(data);
+    }
+  }
 
-      const { city: c, county: co } = await _counties.getCounties(city);
+  for (const job of allPostings) {
+    const job_title = job.title;
+    const job_link = `https://finastra.wd3.myworkdayjobs.com/en-US/FINC${job.externalPath}`;
+    let city = job.locationsText;
 
-      if (c) {
-        counties = [...new Set([...counties, ...co])];
-      }
+    if (city && city.includes("Locations")) {
+      const match = job.externalPath.match(/\/job\/([^\/]+)/);
+      city = match ? translate_city(match[1]) : translate_city(city);
+    } else {
+      city = translate_city(city);
+    }
 
+    let counties = [];
+
+    const { city: c, county: co } = await _counties.getCounties(city);
+
+    if (c) {
+      counties = [...new Set([...counties, ...co])];
       const job_element = generateJob(
         job_title,
         job_link,
@@ -51,11 +68,8 @@ const getJobs = async () => {
 
       jobs.push(job_element);
     }
-    if (i < pages) {
-      data.offset = i * 20;
-      res = await scraper.post(data);
-    }
   }
+
   return jobs;
 };
 
@@ -64,6 +78,12 @@ const run = async () => {
   const logo =
     "https://logowik.com/content/uploads/images/finastra2515.logowik.com.webp";
   const jobs = await getJobs();
+
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}.`);
+    return;
+  }
+
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
@@ -73,4 +93,3 @@ if (require.main === module) {
 }
 
 module.exports = { run, getJobs, getParams };
-
