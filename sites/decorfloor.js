@@ -10,8 +10,14 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getAditionalCity = async (url) => {
-  const scraper = new Scraper(url);
-  const soup = await scraper.get_soup("HTML");
+  let soup;
+  try {
+    const scraper = new Scraper(url);
+    scraper.config.timeout = 15000;
+    soup = await scraper.get_soup("HTML");
+  } catch (e) {
+    return { city: [], county: [] };
+  }
 
   let location;
 
@@ -44,11 +50,17 @@ const getAditionalCity = async (url) => {
 const getJobs = async () => {
   const url = "https://decorfloor.ro/careers/";
 
-  const scraper = new Scraper(url);
+  let soup;
+  try {
+    const scraper = new Scraper(url);
+    scraper.config.timeout = 15000;
+    soup = await scraper.get_soup("HTML");
+  } catch (e) {
+    console.log("Could not fetch careers page from decorfloor.ro");
+    return [];
+  }
+
   const jobs = [];
-
-  const soup = await scraper.get_soup("HTML");
-
   const jobsElements = soup.findAll("div", { class: "vc_gitem-col" });
 
   for (const elem of jobsElements) {
@@ -76,6 +88,12 @@ const run = async () => {
   const company = "Decorfloor";
   const logo = "https://decorfloor.ro/wp-content/uploads/2015/08/logo.png";
   const jobs = await getJobs();
+
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}.`);
+    return;
+  }
+
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
@@ -84,4 +102,4 @@ if (require.main === module) {
   run();
 }
 
-module.exports = { run, getJobs, getParams }; // this is needed for our unit test job
+module.exports = { run, getJobs, getParams };

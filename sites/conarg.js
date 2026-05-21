@@ -8,6 +8,7 @@ const {
 const getJobs = async () => {
   const url = "https://conarg.co/cariere.html";
   const scraper = new Scraper(url);
+  scraper.config.validateStatus = false;
   const jobs = [];
   const soup = await scraper.get_soup("HTML");
 
