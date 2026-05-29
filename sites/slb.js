@@ -93,7 +93,12 @@ const run = async () => {
   }
 
   const params = getParams(company, logo);
-  await postApiPeViitor(jobs, params);
+  try {
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log("Scraper completed with error:", error.message);
+    process.exit(0);
+  }
 };
 
 if (require.main === module) {
