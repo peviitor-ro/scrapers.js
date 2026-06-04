@@ -1,70 +1,97 @@
+const puppeteer = require("puppeteer");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
+const { translate_city } = require("../utils.js");
+const { Counties } = require("../getTownAndCounty.js");
 
-const URL = "https://www.siiromania.ro/jobopportunities/#section";
+const _counties = new Counties();
 
-const normalizeLocation = (locationText) => {
-  const value = locationText.trim();
+const BASE_URL = "https://sii-group.com/en-FR/join-us?field_agency_target_id=7860";
 
-  if (value.toLowerCase().includes("hybrid")) {
-    return { cities: [], counties: [], remote: ["hybrid"] };
-  }
+const extractJobsFromPage = (page) =>
+  page.evaluate(() => {
+    const items = document.querySelectorAll(".views-row");
+    const results = [];
 
-  if (value.toLowerCase().includes("remote")) {
-    return { cities: [], counties: [], remote: ["remote"] };
-  }
+    for (const item of items) {
+      const linkEl = item.querySelector("a[href*='/en-FR/node/']");
+      if (!linkEl) continue;
 
-  return { cities: [], counties: [], remote: [] };
-};
+      const job_title = linkEl.querySelector("h3")?.textContent?.trim();
+      if (!job_title) continue;
 
-const normalizeJobLink = (jobLink) =>
-  jobLink.replace(/[?&]trk=[^&]+/g, "").replace(/\/+$/, "");
+      const job_link = linkEl.href;
 
-const extractJobsFromPage = async (url) => {
-  const scraper = new Scraper(url);
-  const res = await scraper.get_soup("HTML");
-  const rows = res.find("tbody")?.findAll("tr") || [];
-  const jobs = [];
+      const locationEl = item.querySelector(".field--name-field-location .field__item");
+      const locationText = locationEl?.textContent?.trim() || "";
 
-  for (const row of rows) {
-    const cells = row.findAll("td");
-    const linkNode = cells[0]?.find("a");
-
-    if (!linkNode || cells.length < 4) {
-      continue;
+      results.push({ job_title, job_link, locationText });
     }
 
-    const job_title = linkNode.text.trim();
-    const job_link = linkNode.attrs.href;
-    const locationText = cells[2].text.trim();
-    const { cities, counties, remote } = normalizeLocation(locationText);
-
-    jobs.push(
-      generateJob(job_title, job_link, "Romania", cities, counties, remote),
-    );
-  }
-
-  return jobs;
-};
+    return results;
+  });
 
 const getJobs = async () => {
-  const pageOneJobs = await extractJobsFromPage(URL);
-  const pageTwoJobs = await extractJobsFromPage(
-    "https://www.siiromania.ro/jobopportunities/page/2/#section",
+  const jobs = [];
+  let currentPage = 0;
+
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   );
 
-  const uniqueJobs = new Map();
+  while (true) {
+    const url = `${BASE_URL}&page=${currentPage}`;
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-  for (const job of [...pageOneJobs, ...pageTwoJobs]) {
-    const normalizedLink = normalizeJobLink(job.job_link);
-    uniqueJobs.set(normalizedLink, { ...job, job_link: normalizedLink });
+    const pageJobs = await extractJobsFromPage(page);
+    if (pageJobs.length === 0) break;
+
+    jobs.push(...pageJobs);
+    currentPage++;
   }
 
-  return [...uniqueJobs.values()];
+  await browser.close();
+
+  for (const job of jobs) {
+    const locationText = job.locationText;
+    let cities = [];
+    let counties = [];
+    let remote = [];
+
+    if (locationText.toLowerCase().includes("remote")) {
+      remote = ["remote"];
+    } else if (locationText.toLowerCase().includes("hybrid")) {
+      remote = ["hybrid"];
+    } else {
+      const rawCity = locationText.split(",")[0]?.trim() || locationText;
+      const city = translate_city(rawCity);
+      if (city) {
+        const { city: c, county: co } = await _counties.getCounties(city);
+        if (c) {
+          cities.push(c);
+          counties = [...new Set([...counties, ...co])];
+        }
+      }
+    }
+
+    job.cities = cities;
+    job.counties = counties;
+    job.remote = remote;
+  }
+
+  return jobs.map((j) =>
+    generateJob(j.job_title, j.job_link, "Romania", j.cities, j.counties, j.remote),
+  );
 };
 
 const run = async () => {
