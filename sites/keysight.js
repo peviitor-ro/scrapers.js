@@ -14,6 +14,12 @@ const getJobs = async () => {
     "https://jobs.keysight.com/api/jobs?stretchUnits=MILES&stretch=10&location=Romania&lat=46&lng=25&woe=12&limit=100&page=1&sortBy=relevance&descending=false&internal=false";
 
   const scraper = new Scraper(url);
+  scraper.config.headers = {
+    ...scraper.config.headers,
+    Accept: "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+    Referer: "https://jobs.keysight.com/",
+  };
 
   let res = await scraper.get_soup("JSON");
 

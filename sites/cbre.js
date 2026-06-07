@@ -1,6 +1,7 @@
+const puppeteer = require("puppeteer");
 const { translate_city, get_jobtype } = require("../utils.js");
+const Jssoup = require("jssoup").default;
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -13,12 +14,23 @@ const URL =
 
 const getJobs = async () => {
   const jobs = [];
-  const scraper = new Scraper(URL);
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
-  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
-  scraper.config.headers["Accept-Language"] = "en-GB,en;q=0.9";
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  );
 
-  const soup = await scraper.get_soup("HTML");
+  await page.goto(URL, { waitUntil: "networkidle2", timeout: 60000 });
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  const html = await page.content();
+  await browser.close();
+
+  const soup = new Jssoup(html);
   const elements = soup.findAll("article", { class: "article--result" });
 
   for (const element of elements) {

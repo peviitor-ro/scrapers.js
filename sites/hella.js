@@ -1,6 +1,5 @@
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -13,19 +12,47 @@ const getJobs = async () => {
   let url =
     "https://hella.csod.com/ux/ats/careersite/3/home?c=hella&country=ro";
 
-  const scraper = new Scraper(url);
-  const response = await scraper.get_soup("HTML");
+  const puppeteer = require("puppeteer");
+  let browser;
+  let token;
+  try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+      ],
+    });
 
-  const pattern = /csod.context={.*?};/g;
-  const context = response.text.match(pattern)[0];
-  const contextJson = JSON.parse(
-    context.replace("csod.context=", "").replace("};", "}")
-  );
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    );
+
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 180000 });
+
+    const html = await page.content();
+
+    const pattern = /csod\.context={.*?};/;
+    const match = html.match(pattern);
+    if (!match) {
+      throw new Error("Could not find csod.context in page");
+    }
+    const contextJson = JSON.parse(
+      match[0].replace("csod.context=", "").replace("};", "}")
+    );
+    token = contextJson.token;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+
   const headers = {
     "Content-Type": "application/json",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    Authorization: `Bearer ${contextJson.token}`,
+    Authorization: `Bearer ${token}`,
   };
 
   const requestBody = {

@@ -1,6 +1,5 @@
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -12,21 +11,39 @@ const _counties = new Counties();
 const getToken = async () => {
   const url =
     "https://marquardt-group.csod.com/ux/ats/careersite/5/home?c=marquardt-group&country=ro";
-  const scraper = new Scraper(url);
-  const res = await scraper.get_soup("HTML");
-  const scripts = res.findAll("script", { type: "text/javascript" });
 
-  let pattern = /"token":(.*),/g;
-
+  const puppeteer = require("puppeteer");
+  let browser;
   let token;
+  try {
+    browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
-  scripts.forEach((script) => {
-    let match = script.text.match(pattern);
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    );
 
-    if (match) {
-      token = match[0].split(":")[1].split(",")[0].replace(/"/g, "");
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 180000 });
+
+    const html = await page.content();
+
+    const pattern = /csod\.context={.*?};/;
+    const match = html.match(pattern);
+    if (!match) {
+      throw new Error("Could not find csod.context in page");
     }
-  });
+    const contextJson = JSON.parse(
+      match[0].replace("csod.context=", "").replace("};", "}")
+    );
+    token = contextJson.token;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 
   return token;
 };
@@ -58,6 +75,8 @@ const getJobs = async () => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(data),
