@@ -1,3 +1,5 @@
+const { decodeHTML } = require("entities");
+
 // Remove diacritics from a string
 const removeDiacritics = (str) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -15,6 +17,8 @@ class Counties {
   }
 
   async getCounties(city) {
+    city = decodeHTML(city);
+
     for (const county of this.#getCounties()) {
       if (county.city.toLowerCase() === removeDiacritics(city.toLowerCase())) {
         return county;
@@ -25,29 +29,37 @@ class Counties {
       city
     )}&page_size=50`;
     const counties_found = [];
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
-    let response = await fetch(api_endpoint).then((response) =>
-      response.json()
-    );
+    try {
+      let response = await fetch(api_endpoint, { signal: controller.signal }).then((response) =>
+        response.json()
+      );
 
-    while (response.next) {
-      counties_found.push(...response.results);
-      response = await fetch(response.next).then((response) => response.json());
-    }
-
-    counties_found.push(...response.results || []);
-
-    let counties = [];
-    counties_found.map((c) => {
-      if (c.name.toLowerCase() === removeDiacritics(city.toLowerCase())) {
-        counties = [...counties, c.county];
+      while (response.next) {
+        counties_found.push(...response.results);
+        response = await fetch(response.next, { signal: controller.signal }).then((response) => response.json());
       }
-    });
 
-    if (counties.length !== 0) {
-      let cityWithountDiacritics = removeDiacritics(city);
-      this.#setCounties([{ city: cityWithountDiacritics, county: counties }]);
-      return { city: cityWithountDiacritics, county: counties };
+      counties_found.push(...response.results || []);
+
+      let counties = [];
+      counties_found.map((c) => {
+        if (c.name.toLowerCase() === removeDiacritics(city.toLowerCase())) {
+          counties = [...counties, c.county];
+        }
+      });
+
+      if (counties.length !== 0) {
+        let cityWithountDiacritics = removeDiacritics(city);
+        this.#setCounties([{ city: cityWithountDiacritics, county: counties }]);
+        return { city: cityWithountDiacritics, county: counties };
+      }
+    } catch (e) {
+      return { city: removeDiacritics(city), county: [] };
+    } finally {
+      clearTimeout(timeout);
     }
 
     return { city: null, county: null };
