@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const { translate_city, get_jobtype } = require("../utils.js");
 const {
   Scraper,
