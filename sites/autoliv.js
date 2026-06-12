@@ -78,7 +78,11 @@ const run = async () => {
     "https://images.teamtailor-cdn.com/images/s3/teamtailor-production/logotype-v3/image_uploads/d7b6d876-3ad3-4051-81a2-e6293d1694ec/original.png";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+  try {
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 
 if (require.main === module) {
