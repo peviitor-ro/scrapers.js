@@ -11,40 +11,53 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://www.borgwarner.com/careers/job-search?indexCatalogue=default&wordsMode=0&1Country=Romania&country=romania";
-  const jobs = [];
-
+    "https://borgwarner.wd5.myworkdayjobs.com/wday/cxs/borgwarner/BorgWarner_Careers/jobs";
   const scraper = new Scraper(url);
-  const res = await scraper.get_soup("HTML");
+  const additionalHeaders = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
+  const limit = 20;
+  const payload = {
+    appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
+    limit,
+    offset: 0,
+    searchText: "",
+  };
+  let soup = await scraper.post(payload);
+  const { total } = soup;
+  const numberOfPages = Math.floor(
+    total % limit === 0 ? total / limit : total / limit + 1
+  );
+  const jobs = [];
+  for (let i = 0; i < numberOfPages; i += 1) {
+    payload.offset = i * limit;
+    soup = await scraper.post(payload);
+    const { jobPostings } = soup;
 
-  const elements = res
-    .find("section", { id: "searchResults" })
-    .findAll("div", { class: "workday-job-result" });
+    for (const job of jobPostings) {
+      const job_title = job.title;
+      const job_link_prefix =
+        "https://borgwarner.wd5.myworkdayjobs.com/en-US/BorgWarner_Careers";
+      const job_link = job_link_prefix + job.externalPath;
 
-  for (const elem of elements) {
-    try {
-      const job_title = elem.find("a", { class: "link" }).text.trim();
-      const job_link = elem
-        .find("a", { class: "link" })
-        .attrs.href.replace(/&amp;/g, "&");
+      const separatorIndex = job.locationsText.indexOf(" - ");
       const city = translate_city(
-        elem.find("p", { class: "bw-global-list-p" }).text.split("-")[0].trim()
+        job.locationsText.substring(0, separatorIndex)
       );
-
-      let cities = [];
 
       let counties = [];
 
       const { city: c, county: co } = await _counties.getCounties(city);
+
       if (c) {
-        cities.push(c);
         counties = [...new Set([...counties, ...co])];
       }
 
-      const job = generateJob(job_title, job_link, "Romania", cities, counties);
-
-      jobs.push(job);
-    } catch (error) {}
+      const job_element = generateJob(job_title, job_link, "Romania", c, counties);
+      jobs.push(job_element);
+    }
   }
   return jobs;
 };
