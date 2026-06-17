@@ -112,6 +112,12 @@ const run = async () => {
   const logo =
     "https://www.dynata.com/wp-content/themes/dynata/images/dynata-logo.png";
   const jobs = await getJobs();
+
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}.`);
+    return;
+  }
+
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
