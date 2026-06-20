@@ -42,7 +42,7 @@ const getJobs = async () => {
 
   let res = await scraper.post(data);
 
-  let pages = res.Pagination.NofPages;
+  const pages = res.Pagination.NofPages;
   let items = res.Results;
 
   const jobs = [];
@@ -51,7 +51,7 @@ const getJobs = async () => {
     for (const item of items) {
       const job_title = item.Document.title[0];
       const job_link = item.Document.link[0];
-      const city = translate_city(item.Document.city[0]);
+      const city = translate_city(item.Document.state[0]);
 
       const { city: c, county: co } = await _counties.getCounties(city);
       let counties = [];
@@ -63,9 +63,11 @@ const getJobs = async () => {
       const job = generateJob(job_title, job_link, "Romania", c, counties);
       jobs.push(job);
     }
-    data.PageNo = i;
-    res = await scraper.post(data);
-    items = res.Results;
+    if (i < pages) {
+      data.PageNo = i + 1;
+      res = await scraper.post(data);
+      items = res.Results;
+    }
   }
   return jobs;
 };

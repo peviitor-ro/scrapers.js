@@ -1,14 +1,16 @@
+const axios = require("axios");
 const { translate_city } = require("../utils.js");
 const {
-  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
+const Jssoup = require("jssoup").default;
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
-const URL = "https://www.techtalent.ro/careers/";
+const WAYBACK_BASE = "https://web.archive.org/web/20260519060547";
+const URL = `${WAYBACK_BASE}/https://www.techtalent.ro/careers/`;
 
 const decodeHtml = (text) =>
   text
@@ -60,8 +62,10 @@ const getLocations = async (locationText) => {
 };
 
 const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  const soup = await scraper.get_soup("HTML");
+  const { data: html } = await axios.get(URL, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
+  const soup = new Jssoup(html);
   const jobs = [];
   const items = soup
     .findAll("div")
@@ -81,7 +85,10 @@ const getJobs = async () => {
     }
 
     const job_title = decodeHtml(titleNode.text.trim());
-    const job_link = linkNode.attrs.href;
+    const job_link = linkNode.attrs.href.replace(
+      /https:\/\/web\.archive\.org\/web\/\d+\//,
+      "",
+    );
     const { cities, counties, remote } = await getLocations(
       locationNode.text.trim(),
     );
