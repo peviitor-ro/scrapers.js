@@ -5,12 +5,27 @@ const {
   getParams,
 } = require("peviitor_jsscraper");
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const getJobs = async () => {
   const url = "https://conarg.co/cariere.html";
-  const scraper = new Scraper(url);
-  scraper.config.validateStatus = false;
   const jobs = [];
-  const soup = await scraper.get_soup("HTML");
+
+  let soup;
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const scraper = new Scraper(url);
+      scraper.config.validateStatus = false;
+      scraper.config.timeout = 15000;
+      soup = await scraper.get_soup("HTML");
+      break;
+    } catch (e) {
+      lastError = e;
+      if (attempt < 2) await delay(3000);
+    }
+  }
+  if (!soup) throw lastError;
 
   const jobsElements = soup.findAll("h3", { class: "el-title" });
 
