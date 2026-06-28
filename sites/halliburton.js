@@ -22,18 +22,14 @@ const getJobs = async () => {
     ) / 25
   );
   let items = res.find("tbody").findAll("tr");
-  let isJobs = res.find("div", { id: "attention" });
-
-  if (isJobs) {
-    return [];
-  }
 
   for (let i = 0; i < pages; i++) {
     for (const item of items) {
-      const isRo = item
+      const locationParts = item
         .find("span", { class: "jobLocation" })
-        .text.split(",")[2]
-        .trim();
+        .text.split(",");
+
+      const isRo = (locationParts[2] || "").trim();
 
       if (isRo.toLowerCase() === "ro") {
         const job_title = item.find("a").text.trim();
@@ -74,6 +70,12 @@ const run = async () => {
   const logo =
     "https://rmkcdn.successfactors.com/6fdd2711/8ba9d1d9-30b6-4c01-b093-b.svg";
   const jobs = await getJobs();
+
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}.`);
+    return;
+  }
+
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
