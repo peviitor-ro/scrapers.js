@@ -234,7 +234,23 @@ function testScraperRepair(scraperName) {
   return false;
 }
 
+function isNoJobs(scriptPath, action) {
+  const stdout = action.stdout || "";
+  const stderr = action.stderr || "";
+
+  if (stdout.includes("No jobs found for") || stdout.includes("Inserted 0 jobs")) {
+    return true;
+  }
+  if (stderr.includes("Joblist for") && stderr.includes("is empty")) {
+    return true;
+  }
+
+  return false;
+}
+
 function main() {
+  const noJobsList = [];
+
   for (const site of fs.readdirSync(SITES_DIR).sort()) {
     if (!site.endsWith(".js") || EXCLUDE.has(site)) {
       continue;
@@ -245,8 +261,20 @@ function main() {
     const action = runScraper(scriptPath);
     cleanupCreatedSiblingFiles(scriptPath, existingFiles);
 
+    if (action.returncode === 0 && isNoJobs(scriptPath, action)) {
+      noJobsList.push(site);
+      console.log(`No jobs found for ${site}`);
+      continue;
+    }
+
     if (action.returncode === 0) {
       console.log(`Success scraping ${site}`);
+      continue;
+    }
+
+    if (isNoJobs(scriptPath, action)) {
+      noJobsList.push(site);
+      console.log(`No jobs found for ${site}`);
       continue;
     }
 
@@ -267,6 +295,15 @@ function main() {
       console.log(`Auto-repair did not fix ${site}`);
       console.log(truncateOutput(repairedAction.stderr));
     }
+  }
+
+  if (noJobsList.length > 0) {
+    console.log("\n========== SCRAPERE FARA JOBURI ==========");
+    for (const site of noJobsList) {
+      console.log(`  - ${site}`);
+    }
+    console.log(`Total: ${noJobsList.length}`);
+    console.log("==========================================");
   }
 }
 
