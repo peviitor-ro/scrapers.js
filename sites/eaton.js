@@ -19,7 +19,7 @@ const getJobs = async () => {
 
   const fetchPages = async () => {
     const jobs = [];
-    for (let page = 0; page < pages; page += 10) {
+    for (let page = 0; page < pages; page += 1) {
       
       const jobspage = response.data.positions.map((job) => {
         return {
@@ -30,42 +30,46 @@ const getJobs = async () => {
       });
       jobs.push(...jobspage);
       scraper = new Scraper(
-        `https://eaton.eightfold.ai/api/pcsx/search?domain=eaton.com&query=&location=Romania&start=${page}&filter_distance=80&filter_include_remote=1`,
+        `https://eaton.eightfold.ai/api/pcsx/search?domain=eaton.com&query=&location=Romania&start=${(page + 1) * 10}&filter_distance=80&filter_include_remote=1`,
       );
       response = await scraper.get_soup(type);
     }
     return jobs;
   };
 
-  const elements = await fetchPages();
+  const seen = new Set();
+  const elements = (await fetchPages()).filter(job => {
+    if (seen.has(job.canonicalPositionUrl)) return false;
+    seen.add(job.canonicalPositionUrl);
+    return true;
+  });
 
   for (const job of elements) {
     const job_title = job.name;
     const job_link = `https://eaton.eightfold.ai${job.canonicalPositionUrl}`;
-    let city;
-    let county;
+    const cities = [];
+    const counties = [];
     const locations = job.locations;
     for (const location of locations) {
-      if (location.includes("Romania") || location.includes("ROU")) {
-        try {
-          city = location.split(",")[0];
-          const obj = await _counties.getCounties(
-            translate_city(city.trim())
-          );
-          city = obj.city;
-          county = obj.county;
-        } catch (error) {
-          city = location;
-          const obj = await _counties.getCounties(
-            translate_city(city.trim())
-          );
-          city = obj.city;
-          county = obj.county;
+      if (/\b(Romania|ROU|RO)\b/.test(location)) {
+        const rawCity = location.split(",")[0].trim();
+        if (rawCity && !["Romania", "ROU", "RO"].includes(rawCity)) {
+          const obj = await _counties.getCounties(translate_city(rawCity));
+          if (obj.city) {
+            cities.push(obj.city);
+            counties.push(...(obj.county || []));
+          }
         }
       }
     }
 
-    jobs.push(generateJob(job_title, job_link, "Romania", city, county));
+    if (cities.length === 0) continue;
+
+    jobs.push(generateJob(
+      job_title, job_link, "Romania",
+      [...new Set(cities)],
+      [...new Set(counties.flat())]
+    ));
   }
 
   return jobs;
