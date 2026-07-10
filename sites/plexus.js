@@ -1,6 +1,6 @@
-const axios = require("axios");
 const { translate_city } = require("../utils.js");
 const {
+  Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
@@ -10,88 +10,74 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url =
-    "https://plexus.wd5.myworkdayjobs.com/wday/cxs/plexus/Plexus_Careers/jobs";
-
-  const headers = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    Origin: "https://plexus.wd5.myworkdayjobs.com",
-    Referer: "https://plexus.wd5.myworkdayjobs.com/en-US/Plexus_Careers",
-  };
-
-  const limit = 20;
-  const data = {
-    appliedFacets: {},
-    limit: 20,
-    offset: 0,
-    searchText: "Romania",
-  };
-
-  let response;
-  try {
-    response = await axios.post(url, data, { headers });
-  } catch (e) {
-    console.error("Plexus API unavailable:", e.message);
-    return [];
-  }
-
-  const { total } = response.data;
-
-  const numberOfPages = Math.ceil(total / limit);
-
   const jobs = [];
+  let url = "https://plexus.eightfold.ai/api/pcsx/search?domain=plexus.com&query=&location=Romania&start=0&sort_by=distance&filter_include_remote=1";
+  let scraper = new Scraper(url);
+  let type = "JSON";
+  let response = await scraper.get_soup(type);
+  const pages = Math.ceil(response.data.count / 10);
 
-  for (let i = 0; i < numberOfPages; i += 1) {
-    const items = response.data.jobPostings;
-    for (const item of items) {
-      const job_title = item.title;
-      const job_link_prefix =
-        "https://plexus.wd5.myworkdayjobs.com/en-US/Plexus_Careers";
-      const job_link = job_link_prefix + item.externalPath;
-      const location = translate_city(item.locationsText.split(",")[0]);
+  const fetchPages = async () => {
+    const jobs = [];
+    for (let page = 0; page < pages; page += 1) {
+      const jobspage = response.data.positions.map((job) => {
+        return {
+          name: job.name,
+          canonicalPositionUrl: job.positionUrl,
+          locations: job.locations,
+        };
+      });
+      jobs.push(...jobspage);
+      scraper = new Scraper(
+        `https://plexus.eightfold.ai/api/pcsx/search?domain=plexus.com&query=&location=Romania&start=${(page + 1) * 10}&sort_by=distance&filter_include_remote=1`,
+      );
+      response = await scraper.get_soup(type);
+    }
+    return jobs;
+  };
 
-      let counties = [];
+  const seen = new Set();
+  const elements = (await fetchPages()).filter(job => {
+    if (seen.has(job.canonicalPositionUrl)) return false;
+    seen.add(job.canonicalPositionUrl);
+    return true;
+  });
 
-      const { city: c, county: co } = await _counties.getCounties(location);
-
-      if (c) {
-        counties = [...new Set([...counties, ...co])];
+  for (const job of elements) {
+    const job_title = job.name;
+    const job_link = `https://plexus.eightfold.ai${job.canonicalPositionUrl}`;
+    const cities = [];
+    const counties = [];
+    const locations = job.locations;
+    for (const location of locations) {
+      if (/\b(Romania|ROU|RO)\b/.test(location)) {
+        const rawCity = location.split(",")[0].trim();
+        if (rawCity && !["Romania", "ROU", "RO"].includes(rawCity)) {
+          const obj = await _counties.getCounties(translate_city(rawCity));
+          if (obj.city) {
+            cities.push(obj.city);
+            counties.push(...(obj.county || []));
+          }
+        }
       }
-
-      const job = generateJob(job_title, job_link, "Romania", c, counties);
-      jobs.push(job);
     }
 
-    data.offset = (i + 1) * limit;
-    try {
-      response = await axios.post(url, data, { headers });
-    } catch (e) {
-      console.error("Plexus API pagination failed:", e.message);
-      break;
-    }
+    if (cities.length === 0) continue;
+
+    jobs.push(generateJob(
+      job_title, job_link, "Romania",
+      [...new Set(cities)],
+      [...new Set(counties.flat())]
+    ));
   }
+
   return jobs;
 };
 
 const run = async () => {
   const company = "Plexus";
-  const logo =
-    "https://www.plexus.com/PlexusCDN/plexus/media/english-media/logos/Plexus-Logo-212x42.svg";
-  let jobs = [];
-  try {
-    jobs = await getJobs();
-  } catch (e) {
-    console.error("Error fetching Plexus jobs:", e.message);
-  }
-
-  if (jobs.length === 0) {
-    console.log(`No jobs found for ${company}.`);
-    return;
-  }
-
+  const logo = "https://www.plexus.com/PlexusCDN/plexus/media/english-media/logos/Plexus-Logo-212x42.svg";
+  const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
