@@ -1,3 +1,4 @@
+const { translate_city } = require("../utils.js");
 const {
   Scraper,
   postApiPeViitor,
@@ -8,62 +9,39 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 const URL = "https://preh8-portal.rexx-recruitment.com/job-offers.html";
-const PAGE_SIZE = 20;
-
-const getJobsFromPage = async (start) => {
-  const scraper = new Scraper(`${URL}?start=${start}`);
-  const soup = await scraper.get_soup("HTML");
-  const rows = soup.find("tbody")?.findAll("tr") || [];
-
-  return rows
-    .slice(1)
-    .map((row) => {
-      const linkNode = row.find("a");
-      const cells = row.findAll("td");
-
-      if (!linkNode || cells.length < 3) {
-        return null;
-      }
-
-      const job_title = linkNode.text.trim();
-      const job_link = linkNode.attrs.href;
-      const location = cells[2].text.trim();
-
-      if (!location.includes("(Romania)")) {
-        return null;
-      }
-
-      const city = location.replace("(Romania)", "").trim();
-      return { job_title, job_link, city };
-    })
-    .filter(Boolean);
-};
 
 const getJobs = async () => {
   const scraper = new Scraper(URL);
   const soup = await scraper.get_soup("HTML");
-  const totalJobs = Number.parseInt(
-    soup.find("div", { id: "countjobs" })?.text.trim() || "0",
-    10,
-  );
-  const numberOfPages = Math.ceil(totalJobs / PAGE_SIZE);
+  const articles = soup.findAll("article", { class: "joboffer_container" });
+
   const jobs = [];
 
-  for (let pageIndex = 0; pageIndex < numberOfPages; pageIndex += 1) {
-    const pageJobs = await getJobsFromPage(pageIndex * PAGE_SIZE);
+  for (const article of articles) {
+    const linkNode = article.find("a");
+    if (!linkNode) continue;
 
-    for (const job of pageJobs) {
-      const { city, county } = await _counties.getCounties(job.city);
-      jobs.push(
-        generateJob(
-          job.job_title,
-          job.job_link,
-          "Romania",
-          city || job.city,
-          county || [],
-        ),
-      );
-    }
+    const job_title = linkNode.text.trim();
+    const job_link = linkNode.attrs.href;
+    const locationEl = article.find("span", { class: "job_standort" });
+    if (!locationEl) continue;
+
+    const location = locationEl.text.trim();
+
+    if (!location.includes("(Romania)")) continue;
+
+    const city = translate_city(location.replace("(Romania)", "").trim());
+    const { city: c, county } = await _counties.getCounties(city);
+
+    jobs.push(
+      generateJob(
+        job_title,
+        job_link,
+        "Romania",
+        c || city,
+        county || [],
+      ),
+    );
   }
 
   return jobs;
