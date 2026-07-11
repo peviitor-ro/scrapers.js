@@ -40,7 +40,12 @@ const getJobsFromPage = async (startrow = 0) => {
   const scraper = new Scraper(`${URL}&startrow=${startrow}`);
   scraper.config.headers["User-Agent"] = "Mozilla/5.0";
 
-  const soup = await scraper.get_soup("HTML");
+  let soup;
+  try {
+    soup = await scraper.get_soup("HTML");
+  } catch {
+    return [];
+  }
   const rows = soup.find("tbody")?.findAll("tr") || [];
   const jobs = [];
 
@@ -91,7 +96,12 @@ const getJobs = async () => {
   const scraper = new Scraper(`${URL}&startrow=0`);
   scraper.config.headers["User-Agent"] = "Mozilla/5.0";
 
-  const soup = await scraper.get_soup("HTML");
+  let soup;
+  try {
+    soup = await scraper.get_soup("HTML");
+  } catch {
+    return [];
+  }
   const totalJobs = Number.parseInt(
     soup
       .find("span", { class: "paginationLabel" })
