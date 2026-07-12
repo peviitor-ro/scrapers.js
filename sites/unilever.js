@@ -1,9 +1,13 @@
+const { translate_city } = require("../utils.js");
 const {
   Scraper,
   postApiPeViitor,
   generateJob,
   getParams,
 } = require("peviitor_jsscraper");
+const { Counties } = require("../getTownAndCounty.js");
+
+const _counties = new Counties();
 
 const URL =
   "https://careers.unilever.com/search-jobs/results?ActiveFacetID=798549&RecordsPerPage=1000&Distance=50&RadiusUnitType=0&Location=Romania&ShowRadius=False&IsPagination=False&FacetType=0&FacetFilters%5B0%5D.ID=798549&FacetFilters%5B0%5D.FacetType=2&FacetFilters%5B0%5D.Count=15&FacetFilters%5B0%5D.Display=Romania&FacetFilters%5B0%5D.IsApplied=true&SearchResultsModuleName=Search+Results&SearchFiltersModuleName=Search+Filters&SortCriteria=0&SortDirection=0&SearchType=1&OrganizationIds=34155&ResultsType=0";
@@ -34,12 +38,16 @@ const getJobs = async () => {
     const job_link = `https://careers.unilever.com${match[1]}`;
     const job_title = match[2].replace(/<[^>]+>/g, "").trim();
     const location = match[3].replace(/<[^>]+>/g, "").trim();
+    const city = translate_city(location.split(",")[0].trim());
+    const { city: c, county } = await _counties.getCounties(city);
 
-    if (!location.toLowerCase().includes("romania")) {
-      continue;
-    }
-
-    jobs.push(generateJob(job_title, job_link, "Romania"));
+    jobs.push(generateJob(
+      job_title,
+      job_link,
+      "Romania",
+      c || city,
+      county || [],
+    ));
   }
 
   return jobs;
