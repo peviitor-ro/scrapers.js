@@ -1,3 +1,5 @@
+const https = require("https");
+const dns = require("dns");
 const {
   Scraper,
   postApiPeViitor,
@@ -11,6 +13,14 @@ const TEXT_FRAGMENT_PREFIX = "#:~:text=";
 
 const getJobs = async () => {
   const scraper = new Scraper(URL);
+  scraper.config.httpsAgent = new https.Agent({
+    lookup: (hostname, options, cb) => {
+      if (hostname === "www.ameropa.ro") {
+        return cb(null, "185.92.195.183", 4);
+      }
+      dns.lookup(hostname, options, cb);
+    },
+  });
   const soup = await scraper.get_soup("HTML");
   const jobs = [];
   const jobElements = soup.findAll("a", { class: "elementor-accordion-title" });
