@@ -9,10 +9,7 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
-const ROMANIA_LOCATION_ID = 21273;
-const WAYBACK_BASE = "https://web.archive.org/web/20241004080537";
-
-const JOBS_URL = `${WAYBACK_BASE}/https://careers.ryanair.com/wp-json/wp/v2/ryanair-jobs-job?per_page=100`;
+const JOBS_URL = "https://careers.ryanair.com/wp-json/wp/v2/ryanair-jobs-job?per_page=100";
 
 const ROMANIA_CHILD_IDS = new Set([
   21273, 21274, 21275, 21276, 21277,

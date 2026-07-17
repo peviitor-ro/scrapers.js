@@ -9,8 +9,7 @@ const Jssoup = require("jssoup").default;
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
-const WAYBACK_BASE = "https://web.archive.org/web/20260519060547";
-const URL = `${WAYBACK_BASE}/https://www.techtalent.ro/careers/`;
+const URL = "https://www.techtalent.ro/careers/";
 
 const decodeHtml = (text) =>
   text
@@ -85,10 +84,7 @@ const getJobs = async () => {
     }
 
     const job_title = decodeHtml(titleNode.text.trim());
-    const job_link = linkNode.attrs.href.replace(
-      /https:\/\/web\.archive\.org\/web\/\d+\//,
-      "",
-    );
+    const job_link = linkNode.attrs.href;
     const { cities, counties, remote } = await getLocations(
       locationNode.text.trim(),
     );
