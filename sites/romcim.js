@@ -12,11 +12,22 @@ const URL = "https://www.romcim.ro/cariere/locuri-de-munca-si-stagii/";
 const decodeHtml = (text) =>
   text.replace(/&amp;/g, "&").replace(/&#039;/g, "'");
 
-const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  scraper.config.headers["User-Agent"] = "Mozilla/5.0";
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const soup = await scraper.get_soup("HTML");
+const getJobs = async () => {
+  let soup;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const scraper = new Scraper(URL);
+      scraper.config.headers["User-Agent"] = "Mozilla/5.0";
+      scraper.config.timeout = 60000;
+      soup = await scraper.get_soup("HTML");
+      break;
+    } catch (e) {
+      if (attempt === 2) throw e;
+      await delay(3000);
+    }
+  }
   const items = soup
     .findAll("div")
     .filter((node) => (node.attrs?.class || "").includes("accordion-item"));
@@ -69,7 +80,12 @@ const run = async () => {
   const company = "Romcim";
   const logo =
     "https://www.romcim.ro/wp-content/uploads/2021/04/Artboard-1-1.png";
-  const jobs = await getJobs();
+  let jobs = [];
+  try {
+    jobs = await getJobs();
+  } catch (e) {
+    console.log(`Failed to fetch jobs for ${company}: ${e.message}`);
+  }
 
   if (jobs.length === 0) {
     console.log(`No jobs found for ${company}.`);
