@@ -9,7 +9,9 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
-const JOBS_URL = "https://careers.ryanair.com/wp-json/wp/v2/ryanair-jobs-job?per_page=100";
+const TARGET_URL =
+  "https://careers.ryanair.com/wp-json/wp/v2/ryanair-jobs-job?per_page=100";
+const JOBS_URL = `https://r.jina.ai/${TARGET_URL}`;
 
 const ROMANIA_CHILD_IDS = new Set([
   21273, 21274, 21275, 21276, 21277,
@@ -17,7 +19,10 @@ const ROMANIA_CHILD_IDS = new Set([
 
 const getJobs = async () => {
   const { data: jobs } = await axios.get(JOBS_URL, {
-    headers: { "User-Agent": "Mozilla/5.0" },
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "x-respond-with": "text",
+    },
   });
 
   const romaniaJobs = jobs.filter((job) =>
