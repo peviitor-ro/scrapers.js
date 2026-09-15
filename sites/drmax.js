@@ -9,13 +9,26 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getSoupWithRetry = async (scraper, type, retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await scraper.get_soup(type);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      await delay(attempt * 2000);
+    }
+  }
+};
+
 const getJobs = async () => {
   const jobs = [];
   let scraper = new Scraper(
     "https://drmaxromania.com/oportunitati-de-cariera/?paged=1"
   );
   let type = "HTML";
-  let soup = await scraper.get_soup(type);
+  let soup = await getSoupWithRetry(scraper, type);
   const soupElements3 = soup.findAll("a", { class: "page-numbers" });
   const pagination = [];
   soupElements3.forEach((el) => {
@@ -27,7 +40,7 @@ const getJobs = async () => {
     const pageUrl = `https://drmaxromania.com/oportunitati-de-cariera/?paged=${page}`;
     scraper = new Scraper(pageUrl);
     type = "HTML";
-    soup = await scraper.get_soup(type);
+    soup = await getSoupWithRetry(scraper, type);
     const soupElements = soup.findAll("h2", { class: "awsm-job-post-title" });
     const soupElements2 = soup.findAll("div", {
       class: "awsm-job-specification-job-location",
