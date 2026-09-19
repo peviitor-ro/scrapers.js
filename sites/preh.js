@@ -8,7 +8,7 @@ const {
 const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
-const URL = "https://preh8-portal.rexx-recruitment.com/job-offers.html";
+const URL = "https://preh8-portal.rexx-recruitment.com/eng";
 
 const getJobs = async () => {
   const scraper = new Scraper(URL);
