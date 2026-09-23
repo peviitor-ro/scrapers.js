@@ -11,7 +11,7 @@ const _counties = new Counties();
 
 const getJobs = async () => {
   const url =
-    "https://www.henkel.ro/ajax/collection/ro/1338824-1338824/queryresults/asJson?Locations_279384=Europe&Europe_877522=Romania&startIndex=0&loadCount=100&ignoreDefaultFilterTags=true";
+    "https://www.henkel.com/ajax/collection/en/2083458-2083458/queryresults/asJson?Locations_279384=Europe&Europe_877522=Romania&startIndex=0&loadCount=100&ignoreDefaultFilterTags=true";
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("JSON");
 
@@ -19,7 +19,7 @@ const getJobs = async () => {
   const items = res.results;
   for (const item of items) {
     const job_title = item.title;
-    const job_link = "https://www.henkel.ro" + item.link;
+    const job_link = "https://www.henkel.com" + item.link;
 
     let city = "";
     try{
