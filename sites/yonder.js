@@ -22,8 +22,22 @@ const MANUAL_COUNTY_MAP = {
 const getJobs = async () => {
   const scraper = new Scraper(POSTS_URL);
   scraper.config.headers = { ...scraper.config.headers, ...DEFAULT_HEADERS };
+  scraper.config.timeout = 60000;
 
-  const posts = await scraper.get_soup("JSON");
+  let posts;
+  try {
+    posts = await scraper.get_soup("JSON");
+  } catch (e) {
+    console.log(`Failed to fetch jobs from ${POSTS_URL}: ${e.message}`);
+    console.log("The career site may be temporarily unavailable.");
+    return [];
+  }
+
+  if (!Array.isArray(posts)) {
+    console.log(`Unexpected response from ${POSTS_URL}.`);
+    return [];
+  }
+
   const jobs = [];
 
   for (const post of posts) {
@@ -32,8 +46,16 @@ const getJobs = async () => {
       ...postScraper.config.headers,
       ...DEFAULT_HEADERS,
     };
+    postScraper.config.timeout = 60000;
 
-    const soup = await postScraper.get_soup("HTML");
+    let soup;
+    try {
+      soup = await postScraper.get_soup("HTML");
+    } catch (e) {
+      console.log(`Failed to fetch job from ${post.link}: ${e.message}`);
+      continue;
+    }
+
     const metas = soup.findAll("meta");
     let ogTitle = "";
 
