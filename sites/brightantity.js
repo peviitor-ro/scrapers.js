@@ -15,10 +15,12 @@ const getJobs = async () => {
   const seenLinks = new Set();
   const browser = await puppeteer.launch({
     headless: "new",
+    ignoreHTTPSErrors: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-blink-features=AutomationControlled",
+      "--ignore-certificate-errors",
     ],
   });
 
