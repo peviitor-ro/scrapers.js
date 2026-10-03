@@ -18,12 +18,28 @@ const ROMANIA_CHILD_IDS = new Set([
 ]);
 
 const getJobs = async () => {
-  const { data: jobs } = await axios.get(JOBS_URL, {
+  const { data: resp } = await axios.get(JOBS_URL, {
     headers: {
       "User-Agent": "Mozilla/5.0",
       "x-respond-with": "text",
     },
   });
+
+  let jobs = resp;
+  if (typeof jobs === "string") {
+    try {
+      jobs = JSON.parse(jobs);
+    } catch (e) {
+      // If parsing fails, leave as is
+      jobs = [];
+    }
+  }
+  if (jobs && typeof jobs === "object" && !Array.isArray(jobs)) {
+    jobs = Object.values(jobs);
+  }
+  if (!Array.isArray(jobs)) {
+    jobs = [];
+  }
 
   const romaniaJobs = jobs.filter((job) =>
     (job["ryanair-jobs-location"] || []).some((id) =>
