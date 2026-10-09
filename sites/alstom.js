@@ -101,7 +101,11 @@ const run = async () => {
     return;
   }
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+  try {
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 
 if (require.main === module) {

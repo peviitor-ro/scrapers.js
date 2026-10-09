@@ -65,7 +65,7 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "Airbus";
-  const logo = "";
+  const logo = "https://ag.wd3.myworkdayjobs.com/Airbus/assets/logo";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);

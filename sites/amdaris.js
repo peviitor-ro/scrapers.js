@@ -52,15 +52,20 @@ const run = async () => {
   const company = "Amdaris";
   const logo =
     "https://amdaris.com/wp-content/themes/amdaris/icons/logos/amdaris_logo_blue_insight.svg";
-  const jobs = await getJobs();
+  try {
+    const jobs = await getJobs();
 
-  if (jobs.length === 0) {
-    console.log(`No jobs found for ${company}.`);
-    return;
+    if (jobs.length === 0) {
+      console.log(`No jobs found for ${company}.`);
+      return;
+    }
+
+    const params = getParams(company, logo);
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log("Scraper completed with error:", error.message);
+    process.exit(0);
   }
-
-  const params = getParams(company, logo);
-  await postApiPeViitor(jobs, params);
 };
 
 if (require.main === module) {

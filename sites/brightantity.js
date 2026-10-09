@@ -66,7 +66,11 @@ const run = async () => {
     "https://i0.wp.com/brightantity.com/wp-content/uploads/2020/08/1123Asset-2-1.png?resize=768%2C265&ssl=1";
   const jobs = await getJobs();
   const params = getParams(company, logo);
-  postApiPeViitor(jobs, params);
+  try {
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 
 if (require.main === module) {

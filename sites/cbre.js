@@ -72,8 +72,7 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "CBRE";
-  const logo =
-    "https://www.logo.wine/a/logo/CBRE_Group/CBRE_Group-Logo.wine.svg";
+  const logo = "https://upload.wikimedia.org/wikipedia/commons/d/dc/CBRE_logo.png";
   const jobs = await getJobs();
 
   if (jobs.length === 0) {
@@ -82,7 +81,11 @@ const run = async () => {
   }
 
   const params = getParams(company, logo);
-  await postApiPeViitor(jobs, params);
+  try {
+    await postApiPeViitor(jobs, params);
+  } catch (error) {
+    console.log(error.message);
+  }
 };
 
 if (require.main === module) {
