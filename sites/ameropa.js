@@ -1,42 +1,39 @@
-const https = require("https");
-const {
-  Scraper,
-  postApiPeViitor,
-  generateJob,
-  getParams,
-} = require("peviitor_jsscraper");
+const { postApiPeViitor, generateJob, getParams } = require("peviitor_jsscraper");
 
 const URL = "https://www.ameropa.ro/ro/joburi-disponibile/";
 const NO_JOBS_TEXT = "Momentan nu sunt posturi disponibile";
 const TEXT_FRAGMENT_PREFIX = "#:~:text=";
 
 const getJobs = async () => {
-  const scraper = new Scraper(URL);
-  scraper.config.headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    Accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Cache-Control": "no-cache",
-    "Upgrade-Insecure-Requests": "1",
-    Connection: "keep-alive",
-    Referer: "https://www.ameropa.ro/",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "same-origin",
-    "Sec-Fetch-User": "?1",
-    "Sec-Ch-Ua":
-      '"Google Chrome";v="120", "Chromium";v="120", "Not_A Brand";v="24"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
-  };
-  scraper.config.httpsAgent = new https.Agent({
-    rejectUnauthorized: false,
+  const puppeteer = require("puppeteer-extra");
+  const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+  const Jssoup = require("jssoup").default;
+
+  puppeteer.use(StealthPlugin());
+
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-blink-features=AutomationControlled",
+    ],
   });
-  scraper.config.timeout = 120000;
-  const soup = await scraper.get_soup("HTML");
+
+  let html;
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    );
+    await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 180000 });
+    await new Promise((resolve) => setTimeout(resolve, 8000));
+    html = await page.content();
+  } finally {
+    await browser.close();
+  }
+
+  const soup = new Jssoup(html);
   const jobs = [];
   const jobElements = soup.findAll("a", { class: "elementor-accordion-title" });
 
