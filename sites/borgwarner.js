@@ -9,42 +9,59 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const SEARCH_URL = "https://www.borgwarner.com/careers/job-search";
+const PAGE_SIZE = 20;
+
+const getWorkdayLink = async (jobId) => {
+  const scraper = new Scraper(`${SEARCH_URL}?country=romania&id=${jobId}`);
+  const soup = await scraper.get_soup("HTML");
+  const applyLink = soup.find("a", { id: "aApply" });
+
+  if (applyLink?.attrs?.href) {
+    return applyLink.attrs.href.replace(/\/apply$/, "");
+  }
+
+  return `${SEARCH_URL}?country=romania&id=${jobId}`;
+};
+
 const getJobs = async () => {
-  const url =
-    "https://borgwarner.wd5.myworkdayjobs.com/wday/cxs/borgwarner/BorgWarner_Careers/jobs";
-  const scraper = new Scraper(url);
-  const additionalHeaders = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-  scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
-  const limit = 20;
-  const payload = {
-    appliedFacets: { Location_Country: ["f2e609fe92974a55a05fc1cdc2852122"] },
-    limit,
-    offset: 0,
-    searchText: "",
-  };
-  let soup = await scraper.post(payload);
-  const { total } = soup;
-  const numberOfPages = Math.floor(
-    total % limit === 0 ? total / limit : total / limit + 1
-  );
   const jobs = [];
+  let page = 1;
+  let numberOfPages = 1;
+
   for (let i = 0; i < numberOfPages; i += 1) {
-    payload.offset = i * limit;
-    soup = await scraper.post(payload);
-    const { jobPostings } = soup;
+    const scraper = new Scraper(`${SEARCH_URL}?country=romania&page=${page}`);
+    const soup = await scraper.get_soup("HTML");
 
-    for (const job of jobPostings) {
-      const job_title = job.title;
-      const job_link_prefix =
-        "https://borgwarner.wd5.myworkdayjobs.com/en-US/BorgWarner_Careers";
-      const job_link = job_link_prefix + job.externalPath;
+    if (i === 0) {
+      const resultsStats = soup.find("span", { id: "resultsStats" });
+      const total = Number.parseInt(
+        resultsStats?.text.match(/(\d+)\s+results/)?.[1] || "0",
+        10
+      );
+      numberOfPages = Math.ceil(total / PAGE_SIZE);
+    }
 
-      const separatorIndex = job.locationsText.indexOf(" - ");
+    const jobPostings = soup.findAll("div", { class: "workday-job-result" });
+
+    for (const jobPosting of jobPostings) {
+      const job_title = jobPosting.find("a")?.text.trim();
+      const jobLink = (jobPosting.find("a")?.attrs?.href || "").replace(
+        /&amp;/g,
+        "&"
+      );
+      const jobId = jobLink.match(/[?&]id=([^&]+)/)?.[1];
+      const locationNode = jobPosting.find("span", { class: "location" });
+
+      if (!job_title || !jobId || !locationNode) {
+        continue;
+      }
+
+      const job_link = await getWorkdayLink(jobId);
+
+      const separatorIndex = locationNode.text.indexOf(" - ");
       const city = translate_city(
-        job.locationsText.substring(0, separatorIndex)
+        locationNode.text.substring(0, separatorIndex).trim()
       );
 
       let counties = [];
@@ -58,6 +75,8 @@ const getJobs = async () => {
       const job_element = generateJob(job_title, job_link, "Romania", c, counties);
       jobs.push(job_element);
     }
+
+    page += 1;
   }
   return jobs;
 };

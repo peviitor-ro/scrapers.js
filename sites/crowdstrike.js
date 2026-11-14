@@ -35,7 +35,7 @@ const getAditionalCity = async (url) => {
 
 const getJobs = async () => {
   const url =
-    "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs";
+    "https://wd5.myworkdaysite.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs";
   const scraper = new Scraper(url);
   const additionalHeaders = {
     "Content-Type": "application/json",
@@ -63,7 +63,7 @@ const getJobs = async () => {
     for (const jobPosting of jobPostings) {
       const { title, externalPath, locationsText } = jobPosting;
       const job_link_prefix =
-        "https://crowdstrike.wd5.myworkdayjobs.com/en-US/crowdstrikecareers";
+        "https://wd5.myworkdaysite.com/en-US/recruiting/crowdstrike/crowdstrikecareers";
       const job_link = job_link_prefix + externalPath;
       const remote = get_jobtype(locationsText.toLowerCase());
       const separatorIndex = locationsText.indexOf(" ");
@@ -79,7 +79,7 @@ const getJobs = async () => {
         job.county = county ? [county] : [];
       } else {
         const jobName = externalPath.split("/");
-        const url = `https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
+        const url = `https://wd5.myworkdaysite.com/wday/cxs/crowdstrike/crowdstrikecareers/job/${
           jobName[jobName.length - 1]
         }`;
         const { city, county, remote } = await getAditionalCity(url);
@@ -97,7 +97,7 @@ const getJobs = async () => {
 const run = async () => {
   const company = "CrowdStrike";
   const logo =
-    "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers/assets/logo";
+    "https://wd5.myworkdaysite.com/recruiting/crowdstrike/crowdstrikecareers/assets/logo";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);

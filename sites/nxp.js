@@ -10,7 +10,7 @@ const { Counties } = require("../getTownAndCounty.js");
 const _counties = new Counties();
 
 const getJobs = async () => {
-  const url = "https://nxp.wd3.myworkdayjobs.com/wday/cxs/nxp/careers/jobs";
+  const url = "https://nxp.wd116.myworkdayjobs.com/wday/cxs/nxp/careers/jobs";
   const scraper = new Scraper(url);
   const additionalHeaders = {
     "Content-Type": "application/json",
@@ -35,7 +35,7 @@ const getJobs = async () => {
     const items = soup.jobPostings;
     for (const item of items) {
       const job_title = item.title;
-      const job_link_prefix = "https://nxp.wd3.myworkdayjobs.com/en-US/careers";
+      const job_link_prefix = "https://nxp.wd116.myworkdayjobs.com/en-US/careers";
       const job_link = job_link_prefix + item.externalPath;
       const separatorIndex = item.locationsText.indexOf(",");
       let city = translate_city(
@@ -61,7 +61,7 @@ const getJobs = async () => {
 
 const run = async () => {
   const company = "NXP";
-  const logo = "https://nxp.wd3.myworkdayjobs.com/careers/assets/logo";
+  const logo = "https://nxp.wd116.myworkdayjobs.com/careers/assets/logo";
   const jobs = await getJobs();
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
