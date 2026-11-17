@@ -8,6 +8,12 @@ const {
 const getJobs = async () => {
   const url = "https://kone.wd3.myworkdayjobs.com/wday/cxs/kone/Careers/jobs";
   const scraper = new Scraper(url);
+  scraper.config.headers = {
+    ...scraper.config.headers,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  scraper.headers = scraper.config;
   const body = {
     limit: 20,
     offset: 0,

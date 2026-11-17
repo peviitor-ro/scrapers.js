@@ -9,7 +9,16 @@ const URL = "https://www.sync.ro/jobs.html";
 
 const getJobs = async () => {
   const scraper = new Scraper(URL);
-  const soup = await scraper.get_soup("HTML");
+  scraper.config.timeout = 20000;
+
+  let soup;
+  try {
+    soup = await scraper.get_soup("HTML");
+  } catch (error) {
+    console.log(`Failed to fetch jobs from ${URL}: ${error.message}`);
+    return [];
+  }
+
   const jobs = [];
   const titleNodes = soup
     .findAll("div")

@@ -15,6 +15,21 @@ const JOB_URL_PREFIX =
   "https://michelinhr.wd3.myworkdayjobs.com/en-US/Michelin";
 const LIMIT = 20;
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const postWithRetry = async (scraper, data, retries = 5) => {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await scraper.post(data);
+    } catch (error) {
+      if (attempt === retries) {
+        throw error;
+      }
+      await delay(attempt * 3000);
+    }
+  }
+};
+
 const getJobLocationsFromDetail = async (jobLink) => {
   const response = await axios.get(jobLink, {
     headers: {
@@ -86,6 +101,7 @@ const getJobs = async () => {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
+  scraper.headers = scraper.config;
 
   const data = {
     appliedFacets: {
@@ -96,7 +112,7 @@ const getJobs = async () => {
     searchText: "",
   };
 
-  let response = await scraper.post(data);
+  let response = await postWithRetry(scraper, data);
   const jobs = [];
   const total = response.total || 0;
   const numberOfPages = Math.ceil(total / LIMIT);
@@ -133,7 +149,7 @@ const getJobs = async () => {
 
     data.offset += LIMIT;
     if (pageIndex < numberOfPages - 1) {
-      response = await scraper.post(data);
+      response = await postWithRetry(scraper, data);
     }
   }
 

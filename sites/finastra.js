@@ -9,6 +9,19 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const postWithRetry = async (scraper, data, retries = 5) => {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await scraper.post(data);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      await delay(3000);
+    }
+  }
+};
+
 const getJobs = async () => {
   let url =
     "https://finastra.wd3.myworkdayjobs.com/wday/cxs/finastra/FINC/jobs";
@@ -23,7 +36,7 @@ const getJobs = async () => {
   };
 
   const scraper = new Scraper(url);
-  let res = await scraper.post(data)
+  let res = await postWithRetry(scraper, data);
   const jobsNumber = res.total;
   const pages = Math.ceil(jobsNumber / 20);
   console.log(`Total jobs: ${jobsNumber}, Pages: ${pages}`);
@@ -36,7 +49,7 @@ const getJobs = async () => {
     }
     if (i < pages) {
       data.offset = i * 20;
-      res = await scraper.post(data);
+      res = await postWithRetry(scraper, data);
     }
   }
 
