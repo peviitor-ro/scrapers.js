@@ -9,6 +9,26 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const delay = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const postWithRetry = async (url, data, headers, retries = 5) => {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return (await axios.post(url, data, { headers })).data;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await delay(attempt * 3000);
+      }
+    }
+  }
+  throw lastError;
+};
+
 const getJobs = async () => {
   const url =
     "https://flextronics.wd1.myworkdayjobs.com/wday/cxs/flextronics/Careers/jobs";
@@ -31,13 +51,13 @@ const getJobs = async () => {
 
   const jobs = [];
 
-  const res = (await axios.post(url, data, { headers })).data;
+  const res = await postWithRetry(url, data, headers);
   const jobsNumber = res.total;
   const pages = Math.ceil(jobsNumber / 20);
 
   for (let i = 0; i < pages; i++) {
     data["offset"] = i * 20;
-    const response = (await axios.post(url, data, { headers })).data;
+    const response = await postWithRetry(url, data, headers);
     const items = response.jobPostings;
 
     for (const job of items) {

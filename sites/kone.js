@@ -5,6 +5,26 @@ const {
   getParams,
 } = require("peviitor_jsscraper");
 
+const delay = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const postWithRetry = async (scraper, data, retries = 5) => {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await scraper.post(data);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await delay(attempt * 3000);
+      }
+    }
+  }
+  throw lastError;
+};
+
 const getJobs = async () => {
   const url = "https://kone.wd3.myworkdayjobs.com/wday/cxs/kone/Careers/jobs";
   const scraper = new Scraper(url);
@@ -19,7 +39,7 @@ const getJobs = async () => {
     offset: 0,
     searchText: "",
   };
-  const res = await scraper.post(body);
+  const res = await postWithRetry(scraper, body);
 
   const jobs = [];
 

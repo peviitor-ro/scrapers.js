@@ -10,14 +10,39 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const postWithRetry = async (scraper, data, retries = 5) => {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await scraper.post(data);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await delay(attempt * 3000);
+      }
+    }
+  }
+  throw lastError;
+};
+
 const getJobs = async () => {
   const url = "https://ag.wd3.myworkdayjobs.com/wday/cxs/ag/Airbus/jobs";
   const scraper = new Scraper(url);
-  scraper.config.headers["Content-Type"] = "application/json";
-  scraper.config.headers["Accept"] = "application/json";
+  scraper.config.headers = {
+    ...scraper.config.headers,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    Origin: "https://ag.wd3.myworkdayjobs.com",
+    Referer: "https://ag.wd3.myworkdayjobs.com/en-US/Airbus",
+  };
+  scraper.headers = scraper.config;
 
   let data = { appliedFacets: {}, limit: 20, offset: 0, searchText: "Romania" };
-  const res = await scraper.post(data);
+  const res = await postWithRetry(scraper, data);
   const totalJobs = res.total;
   const step = 20;
 
@@ -28,7 +53,7 @@ const getJobs = async () => {
   if (totalJobs > data.limit) {
     for (const page of pages) {
       data["offset"] = page;
-      const res = await scraper.post(data);
+      const res = await postWithRetry(scraper, data);
       items.push(...res.jobPostings);
     }
   } else {
