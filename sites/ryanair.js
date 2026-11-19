@@ -11,34 +11,44 @@ const _counties = new Counties();
 
 const TARGET_URL =
   "https://careers.ryanair.com/wp-json/wp/v2/ryanair-jobs-job?per_page=100";
-const JOBS_URL = `https://r.jina.ai/${TARGET_URL}`;
 
-const ROMANIA_CHILD_IDS = new Set([
-  21273, 21274, 21275, 21276, 21277,
-]);
+const ROMANIA_CHILD_IDS = new Set([21273, 21274, 21275, 21276, 21277, 21895]);
 
 const getJobs = async () => {
-  const { data: resp } = await axios.get(JOBS_URL, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      "x-respond-with": "text",
-    },
-  });
+  const jobs = [];
 
-  let jobs = resp;
-  if (typeof jobs === "string") {
-    try {
-      jobs = JSON.parse(jobs);
-    } catch (e) {
-      // If parsing fails, leave as is
-      jobs = [];
+  for (let page = 1; ; page += 1) {
+    const { data: resp, headers } = await axios.get(
+      `${TARGET_URL}&page=${page}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+        },
+      },
+    );
+
+    let pageJobs = resp;
+    if (typeof pageJobs === "string") {
+      try {
+        pageJobs = JSON.parse(pageJobs);
+      } catch (e) {
+        // If parsing fails, leave as is
+        pageJobs = [];
+      }
     }
-  }
-  if (jobs && typeof jobs === "object" && !Array.isArray(jobs)) {
-    jobs = Object.values(jobs);
-  }
-  if (!Array.isArray(jobs)) {
-    jobs = [];
+    if (pageJobs && typeof pageJobs === "object" && !Array.isArray(pageJobs)) {
+      pageJobs = Object.values(pageJobs);
+    }
+    if (!Array.isArray(pageJobs)) {
+      pageJobs = [];
+    }
+
+    jobs.push(...pageJobs);
+
+    const totalPages = Number(headers["x-wp-totalpages"]) || 1;
+    if (page >= totalPages) {
+      break;
+    }
   }
 
   const romaniaJobs = jobs.filter((job) =>
