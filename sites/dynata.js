@@ -9,6 +9,26 @@ const { Counties } = require("../getTownAndCounty.js");
 
 const _counties = new Counties();
 
+const delay = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const postWithRetry = async (scraper, data, retries = 5) => {
+  let lastError;
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    try {
+      return await scraper.post(data);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await delay(attempt * 3000);
+      }
+    }
+  }
+  throw lastError;
+};
+
 const getAditionalCity = async (url) => {
   const scraper = new Scraper(url);
   const res = await scraper.get_soup("JSON");
@@ -45,8 +65,13 @@ const getJobs = async () => {
   const additionalHeaders = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    Origin: "https://dynata.wd108.myworkdayjobs.com",
+    Referer: "https://dynata.wd108.myworkdayjobs.com/en-US/careers",
   };
   scraper.config.headers = { ...scraper.config.headers, ...additionalHeaders };
+  scraper.headers = scraper.config;
 
   const limit = 20;
 
@@ -62,7 +87,7 @@ const getJobs = async () => {
     searchText: "",
   };
 
-  let soup = await scraper.post(data);
+  let soup = await postWithRetry(scraper, data);
 
   const { total } = soup;
   const numberOfPages = Math.floor(
@@ -72,6 +97,10 @@ const getJobs = async () => {
   const jobs = [];
 
   for (let i = 0; i < numberOfPages; i += 1) {
+    if (i > 0) {
+      data.offset = i * limit;
+      soup = await postWithRetry(scraper, data);
+    }
     const { jobPostings } = soup;
 
     for (const jobPosting of jobPostings) {
@@ -100,9 +129,6 @@ const getJobs = async () => {
         );
       }
     }
-
-    data.offset = i * limit;
-    soup = await scraper.post(data);
   }
   return jobs;
 };
