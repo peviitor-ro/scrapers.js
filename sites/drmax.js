@@ -28,7 +28,13 @@ const getJobs = async () => {
     "https://drmaxromania.com/oportunitati-de-cariera/?paged=1"
   );
   let type = "HTML";
-  let soup = await getSoupWithRetry(scraper, type);
+  let soup;
+  try {
+    soup = await getSoupWithRetry(scraper, type);
+  } catch (error) {
+    console.error(`Failed to fetch jobs from ${scraper.url}: ${error.message}`);
+    return jobs;
+  }
   const soupElements3 = soup.findAll("a", { class: "page-numbers" });
   const pagination = [];
   soupElements3.forEach((el) => {
@@ -40,7 +46,12 @@ const getJobs = async () => {
     const pageUrl = `https://drmaxromania.com/oportunitati-de-cariera/?paged=${page}`;
     scraper = new Scraper(pageUrl);
     type = "HTML";
-    soup = await getSoupWithRetry(scraper, type);
+    try {
+      soup = await getSoupWithRetry(scraper, type);
+    } catch (error) {
+      console.error(`Failed to fetch jobs from ${pageUrl}: ${error.message}`);
+      return jobs;
+    }
     const soupElements = soup.findAll("h2", { class: "awsm-job-post-title" });
     const soupElements2 = soup.findAll("div", {
       class: "awsm-job-specification-job-location",
@@ -84,6 +95,10 @@ const run = async () => {
   const logo =
     "https://drmaxromania.com/wp-content/uploads/2023/03/drmaxromania-logo-768x136.png";
   const jobs = await getJobs();
+  if (jobs.length === 0) {
+    console.log(`No jobs found for ${company}`);
+    return;
+  }
   const params = getParams(company, logo);
   postApiPeViitor(jobs, params);
 };
